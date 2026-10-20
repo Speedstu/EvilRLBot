@@ -190,6 +190,8 @@ def build_match(setup: dict, bot_paths: dict[str, str]) -> Path:
         "[match]", f'game_mode = {json.dumps(setup["mode"])}',
         f'game_map_upk = {json.dumps(setup["map"])}',
         'existing_match_behavior = "Restart"', 'freeplay = false',
+        # The v5 default hides the overlay when agents meet their deadlines.
+        'performance_monitor = "AlwaysShow"',
     ]
     for key, val in setup["options"].items():
         lines.append(f"{key} = {str(val).lower()}")

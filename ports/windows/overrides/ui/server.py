@@ -122,38 +122,27 @@ def _status():
     return {"running": running, "pid": pid, "exit_code": code, "match_file": str(_last_match_file) if _last_match_file else None}
 
 
-def _terminate_group(proc, *, timeout=3):
-    """Terminate only process trees created by Evil RLBot, not other games."""
-    if proc is None or proc.poll() is not None:
-        return
-    try:
-        subprocess.run(
-            ["taskkill", "/PID", str(proc.pid), "/T", "/F"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            timeout=timeout + 3, check=False,
-        )
-        proc.wait(timeout=2)
-    except (OSError, subprocess.TimeoutExpired):
-        try:
-            proc.kill()
-            proc.wait(timeout=2)
-        except (OSError, subprocess.TimeoutExpired):
-            pass
-
-
 def _stop_match():
+    """Stop the previous match, including orphaned RLBot processes.
+
+    Do not kill a whole process tree: RocketLeague.exe is launched as a
+    descendant of RLBotServer and must survive a match restart.
+    """
     global _match_process, _match_log_handle, _game_process, _game_log_handle, _owned_game
+    from ui.match_processes import stop_owned_processes
+
     with _process_lock:
-        if _owned_game:
-            # Only close game processes we explicitly launched from the copied
-            # RocketLeagueOffline directory, never an unrelated user's game.
-            for pid in offline_launcher.running_game_pids():
-                try:
-                    os.kill(pid, signal.SIGTERM)
-                except ProcessLookupError:
-                    pass
-        _terminate_group(_game_process)
-        _terminate_group(_match_process)
+        cleanup = stop_owned_processes()
+        if cleanup["survivors"]:
+            raise RuntimeError(
+                "Cannot start another match while Evil RLBot processes are "
+                f"still running (PIDs: {cleanup['survivors']})"
+            )
+        if _match_process is not None:
+            try:
+                _match_process.wait(timeout=1)
+            except subprocess.TimeoutExpired:
+                pass
         _game_process = None
         _match_process = None
         _owned_game = False
@@ -177,14 +166,14 @@ def _start_match(setup: dict):
             "Bots cannot start: required Python packages or runtime failed checks.\n\n"
             + "\n\n".join(problems[:8])
         )
-    match_file = build_match(setup, _bot_paths())
-    from rlbot.config import load_match_config
-    load_match_config(match_file)
     # On Windows the RLBot V5 launcher handles Epic/Steam itself.
     # No game binaries, credentials or launcher modifications are bundled.
     offline = False
     with _process_lock:
         _stop_match()
+        match_file = build_match(setup, _bot_paths())
+        from rlbot.config import load_match_config
+        load_match_config(match_file)
         LOG.parent.mkdir(exist_ok=True)
         handle = open(LOG, "wb", buffering=0)
         try:
@@ -192,7 +181,8 @@ def _start_match(setup: dict):
                 [str(V5_PY), str(RUNNER), str(match_file)],
                 cwd=ROOT,
                 stdout=handle, stderr=subprocess.STDOUT,
-                creationflags=getattr(subprocess,"CREATE_NEW_PROCESS_GROUP",0),
+                # Windows Terminal must not open a new tab for each match.
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
                 env={**os.environ, "PYTHONUNBUFFERED": "1"},
             )
         except BaseException:
