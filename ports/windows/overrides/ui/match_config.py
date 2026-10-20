@@ -72,6 +72,21 @@ def _v5_with_deps(original: Path, agent: Path, per_player: Path) -> Path:
     bridge = original.suffix.lower() in {".cfg", ".py"} and "auto-v4" in str(settings.get("agent_id", ""))
     paths = []
     python = V5_PY
+    env = {}
+    if bridge:
+        # tools/auto_bot.py writes a POSIX run.sh for the v4 bridge. On Windows,
+        # take its environment and start the bridge with the bundled Python.
+        from ui.bot_importer import dependency_path
+        run_sh = root / "run.sh"
+        if run_sh.is_file():
+            for line in run_sh.read_text(encoding="utf8").splitlines():
+                if line.startswith("export ") and "=" in line:
+                    key, _, value = line[len("export "):].partition("=")
+                    parts = shlex.split(value, posix=True)
+                    env[key.strip()] = parts[0] if parts else ""
+        source = Path(env.get("EVILRLBOT_V4_SOURCE") or original)
+        env["EVILRLBOT_V4_DEPS"] = str(dependency_path(source))
+        command = f'"{V5_PY}" "{ROOT / "src" / "v5_bridge.py"}"'
     if not bridge:
         candidates = discover(original)
         candidate = next((c for c in candidates if c.path == original),
@@ -96,6 +111,7 @@ def _v5_with_deps(original: Path, agent: Path, per_player: Path) -> Path:
              'set "PATH=' + winquote(python.parent) + ';%PATH%"']
     if paths:
         lines.append('set "PYTHONPATH=' + winquote(";".join(paths)) + ';%PYTHONPATH%"')
+    lines.extend('set "' + key + "=" + winquote(value) + '"' for key, value in env.items())
     lines.extend([command, "exit /b %ERRORLEVEL%"])
     wrapper.write_text("\r\n".join(lines) + "\r\n", encoding="utf8")
     wrapped_command = 'cmd.exe /d /c ""' + str(wrapper.resolve()) + '""'

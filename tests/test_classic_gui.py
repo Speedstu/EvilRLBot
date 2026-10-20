@@ -53,6 +53,20 @@ class ClassicGuiTests(unittest.TestCase):
         self.window.move_player(1)
         self.assertEqual(0, self.window.setup["players"][1]["team"])
 
+    def test_human_chip_only_when_no_human_plays(self):
+        from ui.classic import DragTile, HUMAN_ID
+
+        def human_chips():
+            return [self.window.bot_grid.itemAt(i).widget() for i in range(self.window.bot_grid.count())
+                    if getattr(self.window.bot_grid.itemAt(i).widget(), "bot", {}).get("id") == HUMAN_ID]
+
+        self.window.setup["players"] = [{"kind": "psyonix", "team": 0, "skill": "Pro"}]
+        self.window.redraw()
+        self.assertEqual(1, len(human_chips()))
+        self.assertIsInstance(human_chips()[0], DragTile)
+        self.window.add_player("human", 1)
+        self.assertEqual([], human_chips())
+
     def test_native_drop_target_accepts_file_urls(self):
         from unittest.mock import Mock
         mime = QMimeData()
@@ -64,17 +78,14 @@ class ClassicGuiTests(unittest.TestCase):
             mock.assert_called_once_with(["/tmp/mybot.zip"], target_team=1)
 
     def test_failed_match_offers_install_and_defers_until_worker_finishes(self):
-        with patch("ui.classic.QMessageBox") as messages:
-            dialog = messages.return_value
-            dialog.addButton.side_effect = [sentinel.install, sentinel.cancel]
-            dialog.clickedButton.return_value = sentinel.install
+        with patch("ui.classic.message", return_value="install") as dialog:
             self.window._busy = True
             self.window._operation_failed(
                 "Bots cannot start: Nox (rlbot-v4): No module named 'torch'"
             )
             self.assertTrue(self.window._install_after_failed_match)
             self.assertTrue(self.window._busy)
-            dialog.exec.assert_called_once()
+            dialog.assert_called_once()
             self.window._busy = False
             self.window._install_after_failed_match = False
 

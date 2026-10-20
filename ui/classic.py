@@ -14,78 +14,141 @@ import sys
 from pathlib import Path
 
 from PySide6.QtCore import QEvent, QMimeData, Qt, QThread, QTimer, Signal
-from PySide6.QtGui import QAction, QColor, QDrag, QFont, QPainter
+from PySide6.QtGui import QAction, QColor, QDrag, QFont, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import (
-    QApplication, QCheckBox, QComboBox, QDialog, QFileDialog, QFrame,
-    QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMainWindow, QMenu,
-    QMessageBox, QPlainTextEdit, QProgressDialog, QPushButton, QScrollArea, QSizePolicy,
-    QVBoxLayout, QWidget,
+    QApplication, QComboBox, QFileDialog, QFrame, QGridLayout, QHBoxLayout,
+    QLabel, QLineEdit, QMainWindow, QMenu, QPushButton, QScrollArea, QVBoxLayout,
+    QWidget,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from ui import bot_importer, server, offline_launcher
 from ui.match_config import validate_setup
-from ui.native import MAPS, MODES, LAUNCHERS, MutatorsDialog, OptionsDialog, logo_icon
+from ui.native import MAPS, MODES, LAUNCHERS, logo_icon
+from ui.dialogs import (DIALOG_CSS, ExtraSheet, LogsSheet, MutatorsSheet, ProgressSheet, Sheet, Spinner,
+                        Toast, confirm, message, text_label)
+from ui.bot_sheets import AppearanceSheet, BotInfoSheet, ManageBotsSheet, bot_logo, kind_icon, open_folder
 
 CSS = """
-QMainWindow, QWidget#Main {background:#eceeef; color:#292f33; font:13px 'Noto Sans',Arial,sans-serif}
-QWidget {color:#2d3237; font:13px 'Noto Sans',Arial,sans-serif}
-QWidget#Content {background:#d9dde1}
-QFrame#Header, QFrame#Header * {background:#141517; color:white}
-QFrame#WhitePanel {background:#f7f8fa; border:1px solid #c5cdd3; border-radius:4px}
-QFrame#Blue {background:#0961ab; border:2px solid #0b518c; border-radius:4px}
-QFrame#Orange {background:#ed671c; border:2px solid #cf510c; border-radius:4px}
-QLabel#Headline {font:600 17px 'Noto Sans',Arial; color:#202a31}
-QLabel#Hint {color:#66717b; font-size:11px}
-QLabel#HeaderName {color:#f5f7f8; font:700 21px 'Noto Sans',Arial}
-QLabel#OnTeam {color:#fff; font-weight:600; background:transparent}
-QPushButton {border:1px solid #bbc4cc; background:#fff; border-radius:4px; color:#2b353e; padding:7px 10px; font-weight:500; min-height:20px}
-QPushButton:hover {background:#eef3f8; border-color:#899eae}
-QPushButton:pressed {background:#e0e6eb}
-QPushButton#HeadButton {background:#343a40; border:1px solid #343a40; color:#fff; padding:8px 13px}
-QPushButton#HeadButton:hover {background:#444c54}
-QPushButton#Start {background:#28a745; color:#fff; border:1px solid #22943c; font-weight:700; font-size:15px; min-height:34px; padding:9px 22px}
-QPushButton#Start:hover {background:#218e3a}
-QPushButton#Stop {font-size:14px; min-height:34px; padding:9px 15px}
-QPushButton#Filter {border-radius:0; font-size:11px; font-weight:500; padding:4px 10px; color:#1772b9; border:1px solid #1479c7; min-height:18px}
-QPushButton#Filter:checked {color:white; background:#237ccb}
-QPushButton#BotTile {background:#fff; border:1px solid #d2d8dd; border-radius:4px; padding:7px 9px; text-align:left; font-size:12px; min-width:110px; min-height:23px}
-QPushButton#BotTile:hover {background:#edf5ff; border-color:#65a7d6}
-QPushButton#Slot {background:#fff; border:1px solid #d3dbe3; border-radius:2px; padding:7px 9px; text-align:left}
-QPushButton#SlotRemove {color:#c63c46; background:#fff; border:none; font-size:14px; padding:4px; min-width:20px}
-QPushButton#AddTeam {background:transparent; border:none; color:#dceaf5; text-align:left; padding:3px; font-size:12px}
-QPushButton#AddTeam:hover {color:#fff; text-decoration:underline}
-QLineEdit,QComboBox {background:#fff; border:1px solid #c7d1dc; border-radius:3px; padding:6px 9px; min-height:20px}
-QLineEdit:focus,QComboBox:focus {border-color:#1c8de0}
+QMainWindow, QWidget#Main {background:#15181b; color:#e4e6e8; font:13px 'Segoe UI','Noto Sans',Arial,sans-serif}
+QWidget {color:#e4e6e8; font:13px 'Segoe UI','Noto Sans',Arial,sans-serif}
+QToolTip {background:#1d2024; color:#e4e6e8; border:1px solid #3a3f44; padding:5px}
+QFrame#Header {background:rgba(0,0,0,170)}
+QLabel {background:transparent}
+QLabel#HeaderName {color:#ffffff; font:700 20px 'Segoe UI','Noto Sans',Arial}
+QFrame#Panel {background:rgba(12,14,16,220); border-radius:6px}
+QFrame#Blue, QFrame#Orange {background:rgba(12,14,16,220); border-radius:6px}
+QFrame#BlueHead, QFrame#OrangeHead {border-top-left-radius:6px; border-top-right-radius:6px}
+QFrame#BlueHead {background:#0d5bb0}
+QFrame#OrangeHead {background:#ea6b1e}
+QLabel#TeamHead {color:#fff; font-weight:700}
+QLabel#Headline {font:700 20px 'Segoe UI','Noto Sans',Arial; color:#fff}
+QLabel#Hint {color:#7d8388; font-size:11px}
+QLabel#Empty {color:#7d8388; font-style:italic; padding:6px 2px}
+QPushButton {border:none; background:#24282c; border-radius:4px; color:#e4e6e8; padding:6px 11px; min-height:18px}
+QPushButton:hover {background:#2f3439}
+QPushButton:pressed {background:#383e44}
+QPushButton:disabled {color:#6b7075}
+QPushButton#Start {background:#237a2f; color:#fff; font-weight:600; padding:7px 18px}
+QPushButton#Start:hover {background:#2a8e38}
+QPushButton#Start:disabled {background:#1f4425; color:#8fa894}
+QPushButton#Stop {background:#b42323; color:#fff; font-weight:600; padding:7px 14px}
+QPushButton#Stop:hover {background:#c92b2b}
+QPushButton#Filter {border:1px solid #3a3f44; border-radius:0; background:transparent; padding:5px 12px; font-size:12px}
+QPushButton#Filter:hover {background:#24282c}
+QPushButton#Filter:checked {background:#f1f3f4; color:#1b1d1f; border-color:#f1f3f4}
+QFrame#BotTile, QFrame#Slot {background:#1d2024; border-radius:4px}
+QFrame#BotTile:hover {background:#2a2e33}
+QPushButton#Info {background:#3b4045; color:#c5c9cc; border-radius:7px; padding:0; min-height:14px; max-height:14px; min-width:14px; max-width:14px; font:italic 700 10px 'Segoe UI',Arial}
+QPushButton#Info:hover {background:#4b5157}
+QPushButton#SlotRemove {color:#ff7070; background:transparent; font-size:15px; padding:0 4px; min-width:16px}
+QPushButton#SlotRemove:hover {color:#ff9a9a}
+QPushButton#AddTeam {background:transparent; color:#7d8388; text-align:left; padding:6px 12px; font-size:12px}
+QPushButton#AddTeam:hover {color:#fff}
+QLineEdit {background:transparent; border:1px solid #3a3f44; border-radius:4px; padding:5px 9px; color:#e4e6e8}
+QLineEdit:focus {border-color:#7d8388}
+QComboBox {background:#f1f3f4; color:#1b1d1f; border:none; border-radius:4px; padding:5px 10px; min-height:18px}
+QComboBox::drop-down {border:none; width:20px}
+QComboBox QAbstractItemView {background:#f1f3f4; color:#1b1d1f; selection-background-color:#d4d8db; selection-color:#1b1d1f; outline:0}
 QScrollArea {border:0; background:transparent}
-QMenu {background:#fff; border:1px solid #c5cbd0; color:#1d2b39; padding:4px}
-QMenu::item {padding:6px 15px}
-QMenu::item:selected {background:#dcecf9}
-QDialog {background:#f4f5f6}
-QPlainTextEdit {background:#fff; color:#222}
-QStatusBar {background:#eceeef}
+QWidget#BotContent {background:transparent}
+QScrollBar:vertical {background:transparent; width:8px}
+QScrollBar::handle:vertical {background:#3a3f44; border-radius:4px; min-height:24px}
+QScrollBar::add-line, QScrollBar::sub-line {height:0}
+QMenu {background:#1d2024; border:1px solid #3a3f44; color:#e4e6e8; padding:4px}
+QMenu::item {padding:6px 16px}
+QMenu::item:selected {background:#2f3439}
+QMenu::separator {height:1px; background:#3a3f44; margin:4px 6px}
+QDialog {background:#15181b}
+QPlainTextEdit {background:#0e1012; color:#d6d8da; border:1px solid #2a2e33; border-radius:4px; font-family:Consolas,'DejaVu Sans Mono',monospace}
 """
+CSS += "QComboBox::down-arrow {image:url(%s); width:10px; height:6px}" % (
+    ROOT / "ui/assets/chevron-down.svg").as_posix()
 
-class DragTile(QPushButton):
+CSS += DIALOG_CSS
+# Inside dialogs, dropdowns are dark so long forms stay calm.
+CSS += """
+QFrame#Sheet QComboBox {background:#1f2327; color:#e4e6e8; border:1px solid #30353b}
+QFrame#Sheet QComboBox:hover {border-color:#454b52}
+QFrame#Sheet QComboBox:focus {border-color:#6b7178}
+QFrame#Sheet QComboBox QAbstractItemView {background:#1f2327; color:#e4e6e8; selection-background-color:#2f3439; selection-color:#fff}
+QFrame#Sheet QComboBox::down-arrow {image:url(%s)}
+QFrame#Sheet QLineEdit {background:#1f2327; border:1px solid #30353b}
+QCheckBox::indicator:checked {image:url(%s)}
+""" % ((ROOT / "ui/assets/chevron-down-light.svg").as_posix(), (ROOT / "ui/assets/check.svg").as_posix())
+LOGO_SIZE = 24
+
+
+def chip_row(widget, logo_path, name, icon=None):
+    """Logo + name row shared by library chips and team slots."""
+    row = QHBoxLayout(widget)
+    row.setContentsMargins(3, 3, 8, 3)
+    row.setSpacing(7)
+    logo = QLabel()
+    logo.setPixmap(icon or bot_logo(logo_path, LOGO_SIZE, name))
+    logo.setFixedSize(LOGO_SIZE, LOGO_SIZE)
+    logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    row.addWidget(logo)
+    row.addWidget(QLabel(name), 1)
+    return row
+
+
+def info_button(callback):
+    button = QPushButton("i")
+    button.setObjectName("Info")
+    button.setCursor(Qt.CursorShape.PointingHandCursor)
+    button.clicked.connect(callback)
+    return button
+
+
+HUMAN_ID = "__human__"
+
+
+class DragTile(QFrame):
     def __init__(self, bot, owner):
-        super().__init__("◉  " + bot["name"])
+        super().__init__()
         self.owner = owner
         self.bot = bot
+        self.human = bot["id"] == HUMAN_ID
         self.setObjectName("BotTile")
-        self.setToolTip(f'{bot["name"]}\n{bot["path"]}\n{bot["diagnostics"].get("framework","Unknown")} — drag to a team')
-        self.setMaximumWidth(233)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.setCursor(Qt.CursorShape.OpenHandCursor)
+        if self.human:
+            self.setToolTip("You — click or drag onto a team")
+            chip_row(self, None, "Human", kind_icon("human", LOGO_SIZE))
+        else:
+            self.setToolTip(f'{bot["name"]}\n{bot["path"]}\n{bot["diagnostics"].get("framework","Unknown")} — click or drag to a team')
+            row = chip_row(self, bot["path"], bot["name"])
+            row.addWidget(info_button(lambda: owner.show_bot_details(bot)))
         self.start_pos = None
-        self.clicked.connect(lambda: owner.add_player("bot", owner.next_team(), bot["id"]))
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.RightButton:
+            if self.human:
+                return
             self.owner.show_bot_details(self.bot)
             return
         self.start_pos = event.pos()
-        super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         if self.start_pos is not None and (event.pos() - self.start_pos).manhattanLength() > 10 and event.buttons() & Qt.MouseButton.LeftButton:
@@ -93,10 +156,17 @@ class DragTile(QPushButton):
             mime = QMimeData()
             mime.setData("application/x-evilrlbot-bot", self.bot["id"].encode())
             drag.setMimeData(mime)
-            drag.exec(Qt.DropAction.CopyAction)
+            drag.setPixmap(self.grab())
             self.start_pos = None
-        else:
-            super().mouseMoveEvent(event)
+            drag.exec(Qt.DropAction.CopyAction)
+
+    def mouseReleaseEvent(self, event):
+        if self.start_pos is not None and event.button() == Qt.MouseButton.LeftButton:
+            if self.human:
+                self.owner.add_player("human", self.owner.next_team())
+            else:
+                self.owner.add_player("bot", self.owner.next_team(), self.bot["id"])
+        self.start_pos = None
 
 
 class Team(QFrame):
@@ -106,13 +176,24 @@ class Team(QFrame):
         self.setObjectName("Blue" if team == 0 else "Orange")
         self.setAcceptDrops(True)
         col = QVBoxLayout(self)
-        col.setContentsMargins(11, 11, 11, 8)
-        col.setSpacing(5)
+        col.setContentsMargins(0, 0, 0, 4)
+        col.setSpacing(0)
+        bar = QFrame()
+        bar.setObjectName("BlueHead" if team == 0 else "OrangeHead")
+        head = QHBoxLayout(bar)
+        head.setContentsMargins(12, 5, 12, 5)
+        self.head_count = QLabel()
+        for label in (QLabel("BLUE TEAM" if team == 0 else "ORANGE TEAM"), self.head_count):
+            label.setObjectName("TeamHead")
+            head.addWidget(label)
+        head.insertStretch(1)
+        col.addWidget(bar)
         self.slots = QVBoxLayout()
+        self.slots.setContentsMargins(10, 10, 10, 0)
         self.slots.setSpacing(5)
         col.addLayout(self.slots)
         col.addStretch()
-        add = QPushButton("◯  Add to Blue Team" if team == 0 else "◯  Add to Orange Team")
+        add = QPushButton("+  Add to Blue Team" if team == 0 else "+  Add to Orange Team")
         add.setObjectName("AddTeam")
         add.clicked.connect(lambda: owner.add_menu(add, team))
         col.addWidget(add, 0)
@@ -128,7 +209,10 @@ class Team(QFrame):
     def dropEvent(self, event):
         if event.mimeData().hasFormat("application/x-evilrlbot-bot"):
             bot_id = bytes(event.mimeData().data("application/x-evilrlbot-bot")).decode()
-            self.owner.add_player("bot", self.team, bot_id)
+            if bot_id == HUMAN_ID:
+                self.owner.add_player("human", self.team)
+            else:
+                self.owner.add_player("bot", self.team, bot_id)
         elif event.mimeData().hasUrls():
             self.owner.import_urls(event.mimeData().urls(), target_team=self.team)
         event.acceptProposedAction()
@@ -140,32 +224,32 @@ class Team(QFrame):
                 item.widget().hide()
                 item.widget().deleteLater()
         players = [(i, p) for i, p in enumerate(self.owner.setup["players"]) if p["team"] == self.team]
+        bots = sum(p["kind"] != "human" for _, p in players)
+        self.head_count.setText(f"{bots} BOT{'' if bots == 1 else 'S'}")
         if not players:
-            l = QLabel("Drop bots here")
-            l.setObjectName("OnTeam")
-            l.setStyleSheet("color:#ffffffc8;background:transparent;padding:6px;")
+            l = QLabel("Drop bots here...")
+            l.setObjectName("Empty")
             self.slots.addWidget(l)
         for index, player in players:
-            row = QWidget()
-            layout = QHBoxLayout(row)
-            layout.setContentsMargins(0, 0, 0, 0)
-            layout.setSpacing(0)
+            found = None
             if player["kind"] == "human":
-                name = "🎮  Human"
+                name = "Human"
             elif player["kind"] == "psyonix":
-                name = "⚙  Psyonix " + player.get("skill", "Pro")
+                name = "Psyonix " + player.get("skill", "Pro")
             else:
                 found = self.owner.get_bot(player.get("id"))
-                name = "⬡  " + (found["name"] if found else "Missing bot")
-            title = QPushButton(name)
-            title.setObjectName("Slot")
-            title.setToolTip("Right click to move to the other team")
-            title.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-            title.customContextMenuRequested.connect(lambda pos, idx=index, w=title: self.owner.slot_menu(w, pos, idx))
-            layout.addWidget(title, 1)
+                name = found["name"] if found else "Missing bot"
+            row = QFrame()
+            row.setObjectName("Slot")
+            row.setToolTip("Right click to move to the other team")
+            row.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            row.customContextMenuRequested.connect(lambda pos, idx=index, w=row: self.owner.slot_menu(w, pos, idx))
+            icon = kind_icon(player["kind"], LOGO_SIZE) if player["kind"] in ("human", "psyonix") else None
+            layout = chip_row(row, found["path"] if found else None, name, icon)
+            if found:
+                layout.addWidget(info_button(lambda _, b=found: self.owner.show_bot_details(b)))
             remove = QPushButton("×")
             remove.setObjectName("SlotRemove")
-            remove.setFixedWidth(29)
             remove.setToolTip("Remove player")
             remove.clicked.connect(lambda _, i=index: self.owner.remove_player(i))
             layout.addWidget(remove)
@@ -175,12 +259,12 @@ class Team(QFrame):
 class Background(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
-        from PySide6.QtGui import QPixmap, QLinearGradient
+        from PySide6.QtGui import QLinearGradient
         wallpaper = ROOT / "ui/assets/arena-blur.jpg"
         if wallpaper.exists():
             img = QPixmap(str(wallpaper))
             painter.drawPixmap(self.rect(), img, img.rect())
-            painter.fillRect(self.rect(), QColor(0, 0, 0, 40))
+            painter.fillRect(self.rect(), QColor(0, 0, 0, 90))
         else:
             g = QLinearGradient(0, 0, self.width(), self.height())
             g.setColorAt(0, QColor("#2c4245"))
@@ -202,9 +286,21 @@ class ImportTask(QThread):
             result = []
             for p in self.paths:
                 result.extend(bot_importer.import_path(Path(p)))
+            # Checking whether a bot's packages are already usable can take
+            # seconds (it probes Python runtimes), so do it here, not in the UI.
+            for item in result:
+                item["needs_install"] = bool(item.get("requirements")) and not packages_ready(item["path"])
             self.imported.emit(result)
         except Exception as exc:
             self.failed.emit(str(exc))
+
+
+def packages_ready(path):
+    """True when the bot's required packages already import in some runtime."""
+    from ui.preflight import dependencies_ready
+    path = Path(path)
+    chosen = next((c for c in bot_importer.discover(path) if c.path == path), None)
+    return chosen is None or dependencies_ready(chosen.path, chosen)
 
 
 class InstallTask(QThread):
@@ -220,6 +316,11 @@ class InstallTask(QThread):
 
     def run(self):
         try:
+            # Never download again when everything is already installed, e.g.
+            # a bot that was queued twice or fixed by a previous install.
+            if packages_ready(self.path):
+                self.ready.emit("Packages already installed")
+                return
             message = bot_importer.install_dependencies(
                 Path(self.path), Path(self.requirements), self.framework,
                 torch_backend=self.backend,
@@ -263,64 +364,72 @@ class ClassicWindow(QMainWindow):
         QApplication.instance().installEventFilter(self)
 
     def _ui(self):
-        top = QWidget()
-        top.setObjectName("Main")
-        self.setCentralWidget(top)
-        outer = QVBoxLayout(top)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.setSpacing(0)
+        background = Background()
+        background.setObjectName("Main")
+        self.setCentralWidget(background)
+        page = QVBoxLayout(background)
+        page.setContentsMargins(0, 0, 0, 0)
+        page.setSpacing(0)
 
         header = QFrame()
         header.setObjectName("Header")
-        header.setFixedHeight(56)
+        header.setFixedHeight(48)
         h = QHBoxLayout(header)
-        h.setContentsMargins(15, 5, 18, 5)
-        brand = QLabel("⬡  Evil RLBot")
+        h.setContentsMargins(16, 6, 16, 6)
+        h.setSpacing(6)
+        mark = QLabel()
+        mark.setPixmap(logo_icon().pixmap(30, 30))
+        h.addWidget(mark)
+        h.addSpacing(2)
+        brand = QLabel("Evil RLBot")
         brand.setObjectName("HeaderName")
         h.addWidget(brand)
-        label = QLabel("V4 + V5 ENGINE")
-        label.setStyleSheet("color:#bbc3c9;font-size:10px;background:transparent;padding-left:12px")
-        h.addWidget(label)
         h.addStretch()
         logs = QPushButton("Logs")
-        logs.setObjectName("HeadButton")
         logs.clicked.connect(self.show_logs)
         h.addWidget(logs)
-        menu_button = QPushButton("Menu ▾")
-        menu_button.setObjectName("HeadButton")
+        menu_button = QPushButton("Menu")
         menu_button.clicked.connect(lambda: self.top_menu(menu_button))
         h.addWidget(menu_button)
-        outer.addWidget(header)
+        page.addWidget(header)
 
-        background = Background()
-        area = QVBoxLayout(background)
-        area.setContentsMargins(20, 10, 20, 10)
+        area = QVBoxLayout()
+        area.setContentsMargins(12, 12, 12, 12)
         area.setSpacing(12)
-        outer.addWidget(background, 1)
+        page.addLayout(area, 1)
 
         library = QFrame()
-        library.setObjectName("WhitePanel")
+        library.setObjectName("Panel")
         self.library_panel = library
-        library.setMinimumHeight(205)
         lib = QVBoxLayout(library)
-        lib.setContentsMargins(12, 11, 12, 13)
-        lib.setSpacing(9)
+        lib.setContentsMargins(14, 12, 14, 12)
+        lib.setSpacing(10)
         controls = QHBoxLayout()
-        controls.setSpacing(7)
+        controls.setSpacing(8)
         controls.addWidget(self.title("Bots"))
-        add = QPushButton("＋ Add ▾")
+        controls.addSpacing(4)
+        add = QPushButton("Add/Remove")
         add.clicked.connect(lambda: self.import_menu(add))
         controls.addWidget(add)
-        manage = QPushButton("⚙ Manage bot folders")
+        manage = QPushButton("Manage bot folders")
         manage.clicked.connect(self.manage_bots)
         controls.addWidget(manage)
         controls.addStretch()
-        self.import_text = QLabel("Drag a bot here: ZIP · 7Z · RAR · folder · bot.cfg · bot.toml")
+        self.spinner = Spinner()
+        controls.addWidget(self.spinner)
+        self.import_text = QLabel()
+        self.import_text.setToolTip("ZIP, RAR, 7Z, folder, bot.cfg or bot.toml")
         self.import_text.setObjectName("Hint")
         controls.addWidget(self.import_text)
+        self.search = QLineEdit()
+        self.search.setPlaceholderText("Search...")
+        self.search.setFixedWidth(180)
+        self.search.textChanged.connect(self.render_library)
+        controls.addWidget(self.search)
         lib.addLayout(controls)
         filters = QHBoxLayout()
         filters.setSpacing(0)
+        filters.addStretch()
         for text in ["All", "Standard", "Extra modes", "Special bots/scripts", "Bots for 1v1", "Bots with teamplay", "Goalie bots"]:
             b = QPushButton(text)
             b.setObjectName("Filter")
@@ -330,81 +439,68 @@ class ClassicWindow(QMainWindow):
             filters.addWidget(b)
             setattr(self, "_filter_" + text.replace(" ", "_"), b)
         filters.addStretch()
-        self.search = QLineEdit()
-        self.search.setPlaceholderText("Search...")
-        self.search.setFixedWidth(180)
-        self.search.textChanged.connect(self.render_library)
-        filters.addWidget(self.search)
         lib.addLayout(filters)
         self.bot_scroll = QScrollArea()
         self.bot_scroll.setWidgetResizable(True)
-        self.bot_scroll.setMinimumHeight(110)
+        self.bot_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.bot_content = QWidget()
-        self.bot_content.setStyleSheet("background:#f7f8fa")
+        self.bot_content.setObjectName("BotContent")
         self.bot_grid = QGridLayout(self.bot_content)
-        self.bot_grid.setContentsMargins(2, 1, 2, 2)
-        self.bot_grid.setHorizontalSpacing(7)
-        self.bot_grid.setVerticalSpacing(7)
+        self.bot_grid.setContentsMargins(0, 0, 0, 0)
+        self.bot_grid.setHorizontalSpacing(5)
+        self.bot_grid.setVerticalSpacing(5)
         self.bot_grid.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.bot_scroll.setWidget(self.bot_content)
-        lib.addWidget(self.bot_scroll, 1)
-        area.addWidget(library, 4)
+        lib.addWidget(self.bot_scroll)
+        area.addWidget(library, 0)
 
         teams = QHBoxLayout()
-        teams.setSpacing(44)
+        teams.setSpacing(12)
         self.blue = Team(self, 0)
         self.orange = Team(self, 1)
         teams.addWidget(self.blue, 1)
         teams.addWidget(self.orange, 1)
-        area.addLayout(teams, 3)
+        area.addLayout(teams, 1)
 
         settings = QFrame()
-        settings.setObjectName("WhitePanel")
-        settings.setMinimumHeight(142)
+        settings.setObjectName("Panel")
         bottom = QVBoxLayout(settings)
-        bottom.setContentsMargins(12, 10, 12, 10)
-        bottom.setSpacing(7)
+        bottom.setContentsMargins(14, 12, 14, 12)
+        bottom.setSpacing(10)
         bottom.addWidget(self.title("Match Settings"))
         bar = QHBoxLayout()
         bar.setSpacing(8)
-        for title, choices, key in [("Map", MAPS, "map"), ("Mode", MODES, "mode")]:
-            field = QVBoxLayout()
-            field.setSpacing(3)
-            caption = QLabel(title)
-            caption.setObjectName("Hint")
-            field.addWidget(caption)
+        for choices, key, width in [(MAPS, "map", 190), (MODES, "mode", 130)]:
             combo = QComboBox()
             for name, val in choices:
                 combo.addItem(name, val)
+            combo.setMinimumWidth(width)
             combo.currentIndexChanged.connect(self.apply_settings)
             setattr(self, key + "_combo", combo)
-            field.addWidget(combo)
-            bar.addLayout(field)
+            bar.addWidget(combo)
         for caption, callback in [("Mutators", self.show_mutators), ("Extra", self.show_extra)]:
-            bar.addWidget(QPushButton(caption, clicked=callback), 0, Qt.AlignmentFlag.AlignBottom)
+            bar.addWidget(QPushButton(caption, clicked=callback))
         bar.addStretch()
         self.launcher_combo = QComboBox()
         for name, value in LAUNCHERS:
             self.launcher_combo.addItem(name, value)
         self.launcher_combo.currentIndexChanged.connect(self.apply_settings)
-        self.launcher_combo.setFixedWidth(200)
-        bar.addWidget(self.launcher_combo, 0, Qt.AlignmentFlag.AlignBottom)
+        self.launcher_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.launcher_combo.setMinimumContentsLength(18)
+        self.launcher_combo.setToolTip("Launcher")
+        bar.addWidget(self.launcher_combo)
         self.start = QPushButton("Start Match")
         self.start.setObjectName("Start")
         self.start.clicked.connect(self.start_match)
-        bar.addWidget(self.start, 0, Qt.AlignmentFlag.AlignBottom)
+        bar.addWidget(self.start)
         stop = QPushButton("Stop")
         stop.setObjectName("Stop")
         stop.clicked.connect(self.stop_match)
-        bar.addWidget(stop, 0, Qt.AlignmentFlag.AlignBottom)
+        bar.addWidget(stop)
         bottom.addLayout(bar)
-        notes = QHBoxLayout()
         self.status = QLabel("Ready")
         self.status.setObjectName("Hint")
-        notes.addWidget(self.status)
-        notes.addStretch()
-        notes.addWidget(QLabel("RLBot v5 engine · V4 compatibility bridge"))
-        bottom.addLayout(notes)
+        bottom.addWidget(self.status)
         area.addWidget(settings, 0)
 
     @staticmethod
@@ -470,27 +566,43 @@ class ClassicWindow(QMainWindow):
             if self._selected_filter == "Goalie bots" and "goalie" not in b["name"].lower():
                 continue
             bots.append(b)
-        col_count = max(2, min(8, (max(650, self.library_panel.width()) - 40) // 168))
+        if (self._selected_filter == "All" and (not q or q in "human you player")
+                and not any(p["kind"] == "human" for p in self.setup["players"])):
+            bots.insert(0, {"id": HUMAN_ID, "name": "Human"})
+        col_count = max(2, min(8, (max(650, self.library_panel.width()) - 30) // 200))
         for index, b in enumerate(bots):
             self.bot_grid.addWidget(DragTile(b, self), index // col_count, index % col_count)
-        for index in range(col_count):
-            self.bot_grid.setColumnStretch(index, 1)
-        self.import_text.setText(f"{len(self.bots)} bots · Drop ZIP, RAR, 7Z, folder, CFG or TOML to import")
+        for index in range(8):
+            self.bot_grid.setColumnStretch(index, 1 if index < col_count else 0)
+        # The panel fits its bots (up to four rows, then scrolls) instead of
+        # leaving an empty area above the teams.
+        rows = max(1, min(4, -(-len(bots) // col_count)))
+        self.bot_scroll.setFixedHeight(rows * 30 + (rows - 1) * 5)
+        if not self.spinner.active:
+            self.import_text.setText(f"{len(self.bots)} bot{'' if len(self.bots) == 1 else 's'} · drop files here to import")
 
     def next_team(self):
         blue = sum(x["team"] == 0 for x in self.setup["players"])
         orange = sum(x["team"] == 1 for x in self.setup["players"])
         return 0 if blue <= orange else 1
 
+    def player_name(self, player):
+        if player["kind"] == "human":
+            return "Human"
+        if player["kind"] == "psyonix":
+            return "Psyonix " + player.get("skill", "Pro")
+        found = self.get_bot(player.get("id"))
+        return found["name"] if found else "Missing bot"
+
     def add_player(self, kind, team, value=None):
         if len(self.setup["players"]) >= 10:
-            self.notice("Rocket League supports a maximum of 10 players in this setup.")
+            self.toast("A match can have at most 10 players.", "warning")
             return
         if kind == "human" and any(x["kind"] == "human" for x in self.setup["players"]):
-            self.notice("One local human is supported in this launcher.")
+            self.toast("Only one human player is supported.", "warning")
             return
         if kind == "bot" and not self.get_bot(value):
-            self.notice("Please import this bot first.")
+            self.toast("Import this bot first.", "warning")
             return
         player = {"kind": kind, "team": team}
         if kind == "bot":
@@ -500,19 +612,40 @@ class ClassicWindow(QMainWindow):
         self.setup["players"].append(player)
         self.redraw()
         self.schedule_save()
+        self.toast(f'{self.player_name(player)} added to {"Blue" if team == 0 else "Orange"}',
+                   "blue" if team == 0 else "orange", ("Undo", lambda p=player: self._undo_add(p)))
+
+    def _undo_add(self, player):
+        if player in self.setup["players"]:
+            self.setup["players"].remove(player)
+            self.redraw()
+            self.schedule_save()
 
     def remove_player(self, index):
         if len(self.setup["players"]) <= 1:
-            self.notice("At least one player is required.")
+            self.toast("A match needs at least one player.", "warning")
             return
-        self.setup["players"].pop(index)
+        player = self.setup["players"].pop(index)
         self.redraw()
         self.schedule_save()
 
+        def undo():
+            self.setup["players"].insert(min(index, len(self.setup["players"])), player)
+            self.redraw()
+            self.schedule_save()
+        self.toast(f"{self.player_name(player)} removed", "info", ("Undo", undo))
+
     def slot_menu(self, source, pos, index):
         menu = QMenu(self)
-        action = menu.addAction("Move to other team")
-        action.triggered.connect(lambda: self.move_player(index))
+        player = self.setup["players"][index]
+        other = "Orange" if player["team"] == 0 else "Blue"
+        menu.addAction(f"Move to {other}").triggered.connect(lambda: self.move_player(index))
+        found = self.get_bot(player.get("id")) if player["kind"] == "bot" else None
+        if found:
+            menu.addAction("Bot info").triggered.connect(lambda: self.show_bot_details(found))
+            menu.addAction("Appearance").triggered.connect(lambda: self.edit_appearance(found))
+        menu.addSeparator()
+        menu.addAction("Remove").triggered.connect(lambda: self.remove_player(index))
         menu.exec(source.mapToGlobal(pos))
 
     def move_player(self, index):
@@ -522,13 +655,15 @@ class ClassicWindow(QMainWindow):
 
     def add_menu(self, button_widget, team):
         menu = QMenu(self)
+        menu.addSection("Players")
         for title, kind, val in [("Human", "human", None), ("Psyonix Rookie", "psyonix", "Rookie"),
                                  ("Psyonix Pro", "psyonix", "Pro"), ("Psyonix Allstar", "psyonix", "Allstar")]:
-            act = menu.addAction(title)
+            act = menu.addAction(QIcon(kind_icon(kind, 20)), title)
             act.triggered.connect(lambda _, k=kind, v=val: self.add_player(k, team, v))
-        menu.addSeparator()
+        if self.bots:
+            menu.addSection("Bots")
         for bot in self.bots:
-            act = menu.addAction(bot["name"])
+            act = menu.addAction(QIcon(bot_logo(bot["path"], 20, bot["name"])), bot["name"])
             act.triggered.connect(lambda _, id=bot["id"]: self.add_player("bot", team, id))
         menu.exec(button_widget.mapToGlobal(button_widget.rect().bottomLeft()))
 
@@ -542,6 +677,8 @@ class ClassicWindow(QMainWindow):
             combo.blockSignals(False)
         self.blue.redraw()
         self.orange.redraw()
+        # The Human chip appears in the library only while no human is playing.
+        self.render_library()
 
     def apply_settings(self, *_):
         self.setup["map"] = self.map_combo.currentData()
@@ -550,16 +687,18 @@ class ClassicWindow(QMainWindow):
         self.schedule_save()
 
     def show_mutators(self):
-        dlg = MutatorsDialog(self, self.setup)
-        if dlg.exec() == QDialog.DialogCode.Accepted:
-            self.setup["mutators"] = dlg.values()
+        sheet = MutatorsSheet(self, self.setup)
+        if sheet.exec() and sheet.choice:
+            self.setup["mutators"] = sheet.values()
             self.schedule_save()
+            self.toast("Mutators saved", "success")
 
     def show_extra(self):
-        dlg = OptionsDialog(self, self.setup)
-        if dlg.exec() == QDialog.DialogCode.Accepted:
-            self.setup["options"] = dlg.values()
+        sheet = ExtraSheet(self, self.setup)
+        if sheet.exec() and sheet.choice:
+            self.setup["options"] = sheet.values()
             self.schedule_save()
+            self.toast("Extra settings saved", "success")
 
     def schedule_save(self):
         self.save_timer.start(350)
@@ -574,7 +713,7 @@ class ClassicWindow(QMainWindow):
         status = server._status()
         if not status["running"]:
             self.status.setText("● Match stopped" if status["exit_code"] is not None else "● Ready")
-            self.status.setStyleSheet("color:#66717b")
+            self.status.setStyleSheet("color:#7d8388")
             return
         # RLBotServer starts before bots are ready. Report actual bot status,
         # never "Match running" when initialization failed and the field is empty.
@@ -588,41 +727,54 @@ class ClassicWindow(QMainWindow):
             pass
         if "CRITICAL:" in tail or "Spawning deferred due to unready agents" in tail and "exited with code" in tail:
             self.status.setText("⚠ Bot initialization failed — open Logs")
-            self.status.setStyleSheet("color:#ad2525;font-weight:600")
+            self.status.setStyleSheet("color:#ff7070;font-weight:600")
             return
         counts = re.findall(r"Agents ready:\s*(\d+)\s*/\s*(\d+)", tail)
         if counts:
             count, total = map(int, counts[-1])
             if count < total:
                 self.status.setText(f"◌ Initializing bots: {count}/{total}")
-                self.status.setStyleSheet("color:#9a6800")
+                self.status.setStyleSheet("color:#e0b04a")
                 return
             self.status.setText(f"● Match running — {count}/{total} bots ready")
         else:
             self.status.setText("◌ Starting game and loading bots…")
-        self.status.setStyleSheet("color:#427047")
+        self.status.setStyleSheet("color:#6fcf7f")
 
-    def notice(self, message):
-        QMessageBox.information(self, "Evil RLBot", message)
+    def toast(self, text, kind="info", action=None):
+        Toast.show_message(self.centralWidget(), text, kind, action)
+
+    def notice(self, text, title="Evil RLBot", kind="info"):
+        message(self, title, text, kind=kind)
 
     def show_bot_details(self, bot):
-        report = bot.get("diagnostics", {})
-        info = f"Bot: {bot['name']}\nFile: {bot['path']}\nFramework: {report.get('framework','unknown')}\n"
-        info += f"Observation: {report.get('observation','unknown')}\n"
-        info += f"Runtime: {report.get('model_runtime','unknown')}\n\n"
-        info += "\n".join(report.get("warnings", []))
-        self.notice(info)
+        BotInfoSheet(self, bot).exec()
+
+    def edit_appearance(self, bot):
+        if not str(bot["path"]).lower().endswith((".cfg", ".toml")):
+            self.notice("This bot has no bot.cfg or bot.toml, so its appearance can't be edited here.",
+                        "Appearance", "warning")
+            return
+        sheet = AppearanceSheet(self, bot)
+        if not (sheet.exec() and sheet.choice):
+            return
+        try:
+            sheet.save()
+        except Exception as exc:
+            message(self, "Couldn't save appearance", "The bot's loadout file could not be written.",
+                    kind="error", details=str(exc))
+            return
+        self.toast(f"Appearance saved for {bot['name']}", "success")
 
     def import_menu(self, widget):
         menu = QMenu(self)
-        actions = [
-            ("Import bot file…", self.import_file), ("Import folder…", self.import_folder),
-            ("Import ZIP / RAR / 7Z archive…", self.import_archive),
-            ("Refresh bot library", self.refresh_bots),
-        ]
-        for name, callback in actions:
-            action = menu.addAction(name)
-            action.triggered.connect(callback)
+        menu.addSection("Import")
+        for name, callback in [("Bot file…", self.import_file), ("Bot folder…", self.import_folder),
+                               ("ZIP, RAR or 7Z archive…", self.import_archive)]:
+            menu.addAction(name).triggered.connect(callback)
+        menu.addSection("Library")
+        menu.addAction("Manage bots…").triggered.connect(self.manage_bots)
+        menu.addAction("Refresh").triggered.connect(lambda: (self.refresh_bots(), self.toast("Bot library refreshed")))
         menu.exec(widget.mapToGlobal(widget.rect().bottomLeft()))
 
     def import_file(self):
@@ -649,16 +801,28 @@ class ClassicWindow(QMainWindow):
 
     def queue_import(self, paths, target_team=None):
         if self._busy:
-            self.notice("Wait for the current import to finish.")
+            self.toast("Wait for the current import to finish.", "warning")
             return
         self._busy = True
-        self.status.setText(f"Importing {len(paths)} item(s)…")
+        names = ", ".join(Path(p).name for p in paths[:2]) + ("…" if len(paths) > 2 else "")
+        self.set_loading(f"Importing {names}")
         task = ImportTask(paths)
         self._jobs.append(task)
         task.imported.connect(lambda items, t=target_team: self.import_finished(items, t))
-        task.failed.connect(lambda reason: self.notice("Import failed: " + reason))
-        task.finished.connect(lambda job=task: self.task_done(job))
+        task.failed.connect(lambda reason: message(
+            self, "Import failed", "The bot couldn't be imported.", kind="error", details=reason))
+        task.finished.connect(lambda job=task: (self.set_loading(None), self.task_done(job)))
         task.start()
+
+    def set_loading(self, text):
+        """Spinner and text in the Bots header while an import runs."""
+        if text:
+            self.spinner.start()
+            self.import_text.setText(text)
+            self.status.setText(text + "…")
+        else:
+            self.spinner.stop()
+            self.render_library()
 
     def task_done(self, task):
         if task in self._jobs:
@@ -670,7 +834,7 @@ class ClassicWindow(QMainWindow):
     def import_finished(self, imported, target_team=None):
         self.refresh_bots()
         if not imported:
-            self.notice("No RLBot bots found in the dropped files.")
+            self.notice("No bot.cfg or bot.toml was found in what you dropped.", "No bots found", "warning")
             return
         team = target_team if target_team is not None else self.next_team()
         # Immediate integration: place the first imported bot onto a team.
@@ -678,41 +842,35 @@ class ClassicWindow(QMainWindow):
         if not any(x.get("id") == first for x in self.setup["players"]):
             self.add_player("bot", team, first)
         self.status.setText(f"Imported {len(imported)} bot(s) into the library")
-        # A bot may already have a verified per-bot environment from a prior
-        # installation (or a locally reusable dependency set). Never reinstall
-        # 5+ GiB of Torch when its environment is already prepared.
-        from ui.preflight import dependencies_ready
-        requirements = []
-        for item in imported:
-            if not item.get("requirements") or not item.get("new"):
-                continue
-            candidates = bot_importer.discover(Path(item["path"]))
-            chosen = next((c for c in candidates if c.path == Path(item["path"])), None)
-            if chosen and not dependencies_ready(chosen.path, chosen):
-                requirements.append(item)
+        self.toast(f"Imported {len(imported)} bot{'s' if len(imported) != 1 else ''}", "success")
+        # ImportTask already checked which bots can import their packages.
+        # Only ask about the ones that can't, so a re-import never reinstalls.
+        requirements = [item for item in imported if item.get("needs_install")]
         warnings = [f"{x['name']}: {x['warning']}" for x in imported if x.get("warning")]
         if warnings:
-            QMessageBox.warning(self, "Bot compatibility warning", "\n".join(warnings[:8]))
+            message(self, "Compatibility warning", "\n\n".join(warnings[:8]), kind="warning")
         if requirements:
-            prompt = QMessageBox(self)
-            prompt.setWindowTitle("Install bot dependencies?")
-            prompt.setIcon(QMessageBox.Icon.Question)
-            prompt.setText(
-                f"{len(requirements)} imported bot(s) require additional Python packages.\n"
-                "Installing packages can execute code; only approve bots you trust.\n\n"
-                "CPU PyTorch is smaller and more portable (recommended). "
-                "NVIDIA CUDA can be several GB and is useful only for GPU-compatible bots. "
-                "Which version should Evil RLBot install?"
-            )
-            cpu = prompt.addButton("CPU (recommended)", QMessageBox.ButtonRole.AcceptRole)
-            cuda = prompt.addButton("NVIDIA CUDA (large)", QMessageBox.ButtonRole.AcceptRole)
-            prompt.addButton("Not now", QMessageBox.ButtonRole.RejectRole)
-            prompt.exec()
-            selected = prompt.clickedButton()
-            if selected in (cpu, cuda):
-                self._install_backend = "cuda" if selected is cuda else "cpu"
-                self._install_queue = list(requirements)
-                self.install_next()
+            backend = self.ask_backend(
+                "Install bot packages?",
+                f"{len(requirements)} imported bot{'s' if len(requirements) != 1 else ''} need extra Python "
+                "packages. Installing packages runs code from them, so only continue for bots you trust.",
+                "Not now")
+            if backend:
+                self._install_backend = backend
+                self.queue_installs(requirements)
+
+    def queue_installs(self, items):
+        queued = {x["path"] for x in self._install_queue}
+        self._install_queue.extend(x for x in items if x["path"] not in queued)
+        if self._install_dialog is None:
+            self.install_next()
+
+    def ask_backend(self, title, text, cancel):
+        """CPU or CUDA PyTorch for a package install, or None."""
+        return message(self, title, text + "\n\nCPU PyTorch is smaller and works everywhere. "
+                       "NVIDIA CUDA is several GB and only helps GPU bots.",
+                       buttons=[(cancel, None, ""), ("NVIDIA CUDA", "cuda", ""),
+                                ("CPU (recommended)", "cpu", "Primary")])
 
     def install_next(self):
         if not self._install_queue:
@@ -722,23 +880,18 @@ class ClassicWindow(QMainWindow):
         item = self._install_queue.pop(0)
         self._busy = True
         task = InstallTask(item["path"], item["requirements"], item["framework"], self._install_backend)
-        dialog = QProgressDialog(f"Resolving {item['name']} dependencies…", "Cancel", 0, 0, self)
-        dialog.setWindowTitle("Installing bot packages — Evil RLBot")
-        dialog.setWindowModality(Qt.WindowModality.NonModal)
-        dialog.setMinimumWidth(520)
-        dialog.setMinimumDuration(250)
-        dialog.setAutoReset(False)
-        dialog.setAutoClose(False)
+        dialog = ProgressSheet(self, f"Installing packages for {item['name']}", "Resolving dependencies…")
         dialog.canceled.connect(task.requestInterruption)
         self._install_dialog = dialog
         self._jobs.append(task)
         task.progress.connect(lambda message, d=dialog: (
             d.setLabelText(message[:190]) if not d.wasCanceled() else None
         ))
-        task.ready.connect(lambda message: self.status.setText(message))
-        task.failed.connect(lambda error: QMessageBox.warning(
-            self, "Bot dependency installation failed", error[-2300:]
-        ))
+        task.ready.connect(lambda text: (self.status.setText(text),
+                                         self.toast(f"Packages installed for {item['name']}", "success")))
+        task.failed.connect(lambda error: message(
+            self, "Package install failed", f"Packages for {item['name']} couldn't be installed.",
+            kind="error", details=error[-6000:]))
         def completed():
             dialog.close()
             if task in self._jobs:
@@ -754,33 +907,13 @@ class ClassicWindow(QMainWindow):
         task.start()
 
     def manage_bots(self):
-        text = "Imported bot files:\n\n" + "\n".join(f"{b['name']}  —  {b['path']}" for b in self.bots)
-        d = QDialog(self)
-        d.setWindowTitle("Manage bot folders")
-        d.resize(720, 400)
-        v = QVBoxLayout(d)
-        desc = QLabel("Bots are kept in the library, archives are unpacked in ~/.local/share/evilrlbot/bots/")
-        v.addWidget(desc)
-        editor = QPlainTextEdit(text)
-        editor.setReadOnly(True)
-        v.addWidget(editor)
-        footer = QHBoxLayout()
-        footer.addWidget(QPushButton("Import new…", clicked=self.import_file))
-        footer.addWidget(QPushButton("Remove selected bot…", clicked=self.remove_bot_dialog))
-        footer.addWidget(QPushButton("Close", clicked=d.accept))
-        v.addLayout(footer)
-        d.exec()
-
-    def remove_bot_dialog(self):
-        menu = QMenu(self)
-        for bot in self.bots:
-            a = menu.addAction(bot["name"])
-            a.triggered.connect(lambda _, b=bot: self.remove_bot(b))
-        menu.exec(self.mapToGlobal(self.rect().center()))
+        ManageBotsSheet(self).exec()
 
     def remove_bot(self, bot):
-        if QMessageBox.question(self, "Remove bot", f"Remove {bot['name']} from library?\nThe bot's files will not be deleted.") != QMessageBox.StandardButton.Yes:
-            return
+        if not confirm(self, f"Remove {bot['name']}?",
+                       "It's removed from the library and from both teams. The bot's files stay on disk.",
+                       "Remove", danger=True):
+            return False
         lib = [i for i in server._load_library() if i["id"] != bot["id"]]
         server._save_json(server.LIBRARY_FILE, lib)
         self.setup["players"] = [x for x in self.setup["players"] if x.get("id") != bot["id"]]
@@ -789,19 +922,14 @@ class ClassicWindow(QMainWindow):
         self.refresh_bots()
         self.redraw()
         self.schedule_save()
+        self.toast(f"{bot['name']} removed from the library")
+        return True
 
     def configure_game(self):
-        d = QDialog(self)
-        d.setWindowTitle("Configure Rocket League — Evil RLBot")
-        d.resize(720, 350)
-        layout = QVBoxLayout(d)
-        intro = QLabel(
-            "The AppImage includes RLBot V4/V5 but NOT Rocket League. "
-            "For Legendary Offline, install Heroic and sign in to your own Epic account. "
-            "Existing Heroic game installations are detected automatically."
-        )
-        intro.setWordWrap(True)
-        layout.addWidget(intro)
+        d = Sheet(self, "Rocket League location",
+                  "Rocket League isn't included. Install it with Heroic and your own Epic account; "
+                  "existing Heroic installs are found automatically.", width=720)
+        layout = d.body
         info = offline_launcher.installation()
         fields = {}
         for name, key, folder in [
@@ -810,7 +938,7 @@ class ClassicWindow(QMainWindow):
             ("Heroic Wine executable", "wine", False),
         ]:
             line = QHBoxLayout()
-            title = QLabel(name)
+            title = text_label(name, "Key", False)
             title.setFixedWidth(170)
             line.addWidget(title)
             edit = QLineEdit(str(info[key]))
@@ -826,29 +954,24 @@ class ClassicWindow(QMainWindow):
             browse.clicked.connect(choose)
             line.addWidget(browse)
             layout.addLayout(line)
-        layout.addStretch()
-        buttons = QHBoxLayout()
-        save = QPushButton("Save")
-        save.setObjectName("Start")
         def commit():
             offline_launcher.save_preferences(
                 fields["game"].text(), fields["prefix"].text(), fields["wine"].text()
             )
             d.accept()
-            self.status.setText("Rocket League configuration saved")
-        save.clicked.connect(commit)
-        buttons.addStretch()
-        buttons.addWidget(QPushButton("Cancel", clicked=d.reject))
-        buttons.addWidget(save)
-        layout.addLayout(buttons)
+            self.toast("Rocket League location saved", "success")
+        d.add_button("Cancel", result=False)
+        d.add_button("Save", "Primary", callback=commit)
         d.exec()
 
     def install_active_bot_dependencies(self):
-        if self._busy:
-            self.notice("Wait for the current import or installation to finish.")
-            return
         selected = {p.get("id") for p in self.setup["players"] if p.get("kind") == "bot"}
-        selected_bots = [b for b in self.bots if b["id"] in selected]
+        self.install_bot_dependencies([b for b in self.bots if b["id"] in selected])
+
+    def install_bot_dependencies(self, selected_bots):
+        if self._busy:
+            self.toast("Wait for the current import or install to finish.", "warning")
+            return
         from ui.bot_importer import discover
         from ui.preflight import suggested_requirements, dependencies_ready
         pending = []
@@ -863,47 +986,43 @@ class ClassicWindow(QMainWindow):
                                     "framework": chosen.framework,
                                     "requirements": str(requirement_file)})
         if not pending:
-            self.notice(
-                "No missing installable Python packages were found for the selected bots. "
-                "Dependencies are already available, or the bot has another startup problem. "
-                "Use Menu → Export Diagnostics for details."
-            )
+            self.notice("Every package these bots need is already installed. If a bot still won't "
+                        "start, open Logs or export diagnostics from the menu.", "Nothing to install")
             return
-        prompt = QMessageBox(self)
-        prompt.setWindowTitle("Install dependencies for selected bots?")
-        prompt.setIcon(QMessageBox.Icon.Question)
-        prompt.setText(
-            f"Install/reinstall Python dependencies for {len(pending)} selected bot(s)?\n"
-            "Only install trusted packages. CPU Torch downloads are smaller; "
-            "some GPU bots require NVIDIA CUDA support."
-        )
-        cpu = prompt.addButton("CPU (recommended)", QMessageBox.ButtonRole.AcceptRole)
-        cuda = prompt.addButton("NVIDIA CUDA", QMessageBox.ButtonRole.AcceptRole)
-        prompt.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
-        prompt.exec()
-        selected_button = prompt.clickedButton()
-        if selected_button in (cpu, cuda):
-            self._install_backend = "cuda" if selected_button is cuda else "cpu"
-            self._install_queue = pending
-            self.install_next()
+        backend = self.ask_backend(
+            "Install bot packages?",
+            f"Install Python packages for {len(pending)} bot{'s' if len(pending) != 1 else ''}? "
+            "Only install packages for bots you trust.", "Cancel")
+        if backend:
+            self._install_backend = backend
+            self.queue_installs(pending)
 
     def top_menu(self, widget):
         menu = QMenu(self)
-        for name, action in [("Import bot…", self.import_file),
-                             ("Install bot dependencies…", self.install_active_bot_dependencies),
-                             ("Configure Rocket League…", self.configure_game),
-                             ("Match logs", self.show_logs),
-                             ("Export Diagnostics…", self.export_diagnostics),
-                             ("Manage bot folders", self.manage_bots),
-                             ("Reset teams", self.reset_teams)]:
-            item = menu.addAction(name)
-            item.triggered.connect(action)
+        sections = [("Bots", [("Import bot…", self.import_file),
+                              ("Manage bots…", self.manage_bots),
+                              ("Install packages for team bots…", self.install_active_bot_dependencies)]),
+                    ("Match", [("Reset teams", self.reset_teams),
+                               ("Rocket League location…", self.configure_game)]),
+                    ("Help", [("Logs", self.show_logs),
+                              ("Export diagnostics…", self.export_diagnostics)])]
+        for title, entries in sections:
+            menu.addSection(title)
+            for name, action in entries:
+                menu.addAction(name).triggered.connect(action)
         menu.exec(widget.mapToGlobal(widget.rect().bottomLeft()))
 
     def reset_teams(self):
+        previous = [dict(p) for p in self.setup["players"]]
         self.setup["players"] = [{"kind": "human", "team": 0}]
         self.redraw()
         self.schedule_save()
+
+        def undo():
+            self.setup["players"] = previous
+            self.redraw()
+            self.schedule_save()
+        self.toast("Teams reset", "info", ("Undo", undo))
 
     def export_diagnostics(self):
         from ui.support import save_support_zip
@@ -916,32 +1035,19 @@ class ClassicWindow(QMainWindow):
             return
         try:
             output = save_support_zip(Path(filename))
-            self.notice(
-                f"Support report saved:\n{output}\n\n"
-                "Review contents before sending it. It includes bot and pip errors "
-                "but excludes private Epic launcher logs."
-            )
+            self.toast("Diagnostics saved. Check them before sharing.", "success",
+                       ("Show file", lambda: open_folder(output)))
         except Exception as exc:
-            QMessageBox.warning(self, "Export failed", str(exc))
+            message(self, "Export failed", "The diagnostics file couldn't be written.",
+                    kind="error", details=str(exc))
 
     def show_logs(self):
-        d = QDialog(self)
-        d.setWindowTitle("Evil RLBot — Match logs")
-        d.resize(880, 550)
-        v = QVBoxLayout(d)
-        output = QPlainTextEdit()
-        output.setReadOnly(True)
         from ui.support import collect_logs
-        logs = collect_logs()
-        data = "\n\n".join(f"=== {name} ===\n{contents[-25000:]}" for name,contents in logs.items())
-        output.setPlainText(data if data else "No RLBot or Python dependency logs yet.")
-        v.addWidget(output)
-        v.addWidget(QPushButton("Close", clicked=d.accept))
-        d.exec()
+        LogsSheet(self, collect_logs(), lambda: open_folder(server.LOG)).exec()
 
     def _run_background(self, fn, desc):
         if self._busy:
-            self.notice("An operation is already running.")
+            self.toast("Something is already running. Wait for it to finish.", "warning")
             return
         class ActionThread(QThread):
             ok = Signal(object)
@@ -970,27 +1076,19 @@ class ClassicWindow(QMainWindow):
         task.finished.connect(ended)
         task.start()
 
-    def _operation_failed(self, message):
+    def _operation_failed(self, error):
         # Do not force users to discover the dependency installer manually after
         # a failed Start Match. Errors still propagate without starting the game.
-        if "Bots cannot start:" not in message:
-            QMessageBox.warning(self, "Evil RLBot", message[-4500:])
+        if "Bots cannot start:" not in error:
+            message(self, "Something went wrong", error.strip().splitlines()[-1][:300] if error.strip() else "Unknown error",
+                    kind="error", details=error[-8000:])
             return
-        dialog = QMessageBox(self)
-        dialog.setWindowTitle("Bots need Python dependencies")
-        dialog.setIcon(QMessageBox.Icon.Warning)
-        dialog.setText(
-            "One or more bots cannot import their required Python packages.\n"
-            "A system-wide PyTorch installation is NOT visible to the isolated "
-            "RLBot V4/V5 Python runtimes bundled in this AppImage."
-        )
-        dialog.setDetailedText(message)
-        install = dialog.addButton(
-            "Install missing bot packages…", QMessageBox.ButtonRole.AcceptRole
-        )
-        dialog.addButton("Close", QMessageBox.ButtonRole.RejectRole)
-        dialog.exec()
-        if dialog.clickedButton() is install:
+        choice = message(
+            self, "Bots need Python packages",
+            "One or more bots can't import the Python packages they need, so the match didn't start.",
+            kind="warning", details=error,
+            buttons=[("Close", None, ""), ("Install packages…", "install", "Primary")])
+        if choice == "install":
             # Start Match is still finishing its QThread; wait for the finished
             # signal to clear _busy before opening the CPU/CUDA prompt.
             self._install_after_failed_match = True
@@ -1001,7 +1099,7 @@ class ClassicWindow(QMainWindow):
             validated = validate_setup(self.setup, server._bot_paths())
             self.save()
         except Exception as exc:
-            self.notice(str(exc))
+            self.notice(str(exc), "Can't start the match", "warning")
             return
         self._run_background(lambda: server._start_match(validated), "Starting Rocket League and RLBot V5…")
 
@@ -1012,7 +1110,7 @@ class ClassicWindow(QMainWindow):
         QApplication.instance().removeEventFilter(self)
         if self._busy or any(t.isRunning() for t in self._jobs):
             event.ignore()
-            self.notice("An import or match operation is still running. Please wait.")
+            self.toast("An import or match operation is still running.", "warning")
             return
         self.save()
         event.accept()
@@ -1024,6 +1122,7 @@ def main():
     app.setApplicationName("Evil RLBot")
     app.setDesktopFileName("evil-rlbot")
     app.setStyle("Fusion")
+    app.styleHints().setColorScheme(Qt.ColorScheme.Dark)
     app.setStyleSheet(CSS)
     window = ClassicWindow()
     window.show()

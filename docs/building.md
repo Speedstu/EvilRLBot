@@ -24,7 +24,10 @@ This assembles `build/windows-source/`. You still need:
 - Embedded or installable Windows Python runtimes for RLBot v4 and v5.
 - Compatible wheels for the bundled runtimes.
 - The native RLBotServer executable.
-- A C compiler for `packaging/windows/launcher.c` and NSIS for the installer.
+- A C compiler for `packaging/windows/launcher.c` and NSIS for the installer. With MinGW, embed the icon from `launcher.rc`:
+
+      windres packaging/windows/launcher.rc -O coff -o launcher-res.o
+      gcc -municode -mwindows -O2 -o EvilRLBot.exe packaging/windows/launcher.c launcher-res.o
 
 The packaged-release scripts expect these assets at specific paths in the assembled working directory. They are maintained for release builders, not intended to fetch or distribute the game.
 

@@ -147,18 +147,13 @@ def horizontal(parent=None, gap=8, margins=(0, 0, 0, 0)):
 
 
 def logo_icon():
-    pix = QPixmap(64, 64)
-    pix.fill(Qt.GlobalColor.transparent)
-    painter = QPainter(pix)
-    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-    painter.setPen(Qt.PenStyle.NoPen)
-    painter.setBrush(QColor("#24c46e"))
-    painter.drawRoundedRect(3, 3, 58, 58, 13, 13)
-    painter.setFont(QFont("Sans", 35, QFont.Weight.Black))
-    painter.setPen(QColor("#062c18"))
-    painter.drawText(pix.rect(), Qt.AlignmentFlag.AlignCenter, "E")
-    painter.end()
-    return QIcon(pix)
+    """The Evil RLBot shield, with sharp versions for small sizes."""
+    source = QPixmap(str(Path(__file__).resolve().parent / "assets" / "logo.png"))
+    icon = QIcon()
+    for size in (16, 20, 24, 32, 48, 64, 128, 256):
+        icon.addPixmap(source.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatio,
+                                     Qt.TransformationMode.SmoothTransformation))
+    return icon
 
 
 class Worker(QThread):

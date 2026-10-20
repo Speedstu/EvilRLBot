@@ -14,6 +14,8 @@ ShowInstDetails show
 ShowUninstDetails show
 SetCompressor /SOLID lzma
 BrandingText "Evil RLBot - Native V4/V5 Windows Engine"
+!define MUI_ICON "${ROOT}\packaging\windows\evilrlbot.ico"
+!define MUI_UNICON "${ROOT}\packaging\windows\evilrlbot.ico"
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES

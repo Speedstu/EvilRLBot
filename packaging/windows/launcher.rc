@@ -1,0 +1,2 @@
+// Embeds the Evil RLBot shield as the launcher icon (Explorer, taskbar, shortcuts).
+1 ICON "evilrlbot.ico"
