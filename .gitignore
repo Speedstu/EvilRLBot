@@ -4,7 +4,7 @@
 venv/
 runtime/
 build/
-release/
+/release/
 dist/
 .generated/
 .references/

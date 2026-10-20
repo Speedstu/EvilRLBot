@@ -1,7 +1,9 @@
 Unicode True
 !include "MUI2.nsh"
 !define PRODUCT "Evil RLBot"
+!ifndef VERSION
 !define VERSION "2026.10.20.4"
+!endif
 !define PUBLISHER "Evil RLBot Community"
 !ifndef ROOT
 !define ROOT "${__FILEDIR__}\..\.."

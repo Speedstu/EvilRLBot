@@ -1,0 +1,190 @@
+name: Build and publish release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Don't run two releases at once, even if several commits are pushed quickly.
+concurrency:
+  group: evilrlbot-main-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      tag: ${{ steps.plan.outputs.tag }}
+      windows_tag: ${{ steps.plan.outputs.windows_tag }}
+      windows_asset: ${{ steps.plan.outputs.windows_asset }}
+      linux_tag: ${{ steps.plan.outputs.linux_tag }}
+      linux_asset: ${{ steps.plan.outputs.linux_asset }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Select next release and runtime baselines
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/release/plan.py
+
+  windows:
+    needs: plan
+    runs-on: windows-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download previous tested Windows runtime
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_TAG: ${{ needs.plan.outputs.windows_tag }}
+          BASE_ASSET: ${{ needs.plan.outputs.windows_asset }}
+        run: |
+          New-Item -ItemType Directory -Force build/baselines | Out-Null
+          gh release download "$env:BASE_TAG" --repo "$env:GITHUB_REPOSITORY" --pattern "$env:BASE_ASSET" --dir build/baselines
+      - name: Assemble portable build from current source
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+          BASE_ASSET: ${{ needs.plan.outputs.windows_asset }}
+        run: |
+          python scripts/release/assemble_windows.py --baseline "build/baselines/$env:BASE_ASSET" --version "$env:VERSION"
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Compile the current Windows GUI launcher and icon
+        shell: cmd
+        run: |
+          rc /nologo /i packaging\windows /fo "%RUNNER_TEMP%\evilrlbot.res" packaging\windows\launcher.rc
+          if errorlevel 1 exit /b 1
+          cl /nologo /O2 /W3 /DUNICODE /D_UNICODE packaging\windows\launcher.c "%RUNNER_TEMP%\evilrlbot.res" /link /SUBSYSTEM:WINDOWS /OUT:"release\EvilRLBot\EvilRLBot.exe"
+          if errorlevel 1 exit /b 1
+      - name: Repack portable ZIP with newly built native launcher
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          python scripts/release/assemble_windows.py --version "$env:VERSION" --package-only
+      - name: Validate bundled runtimes and Windows compatibility bridge
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & "$PWD/release/EvilRLBot/runtime/v5/python.exe" -m pip --version
+          if ($LASTEXITCODE -ne 0) { throw "Bundled pip is broken" }
+          & "$PWD/release/EvilRLBot/runtime/v5/python.exe" -m unittest discover -s tests -p test_windows_process_ownership.py -v
+          if ($LASTEXITCODE -ne 0) { throw "Process regression tests failed" }
+          $probe = "import runpy; runpy.run_path(r'$PWD/release/EvilRLBot/src/v5_bridge.py'); print('V4 bridge import OK')"
+          & "$PWD/release/EvilRLBot/runtime/v5/python.exe" -c $probe
+          if ($LASTEXITCODE -ne 0) { throw "RLBot V4 bridge failed to import" }
+      - name: Compile Windows installer
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $nsis = "${env:ProgramFiles(x86)}\NSIS\makensis.exe"
+          if (-not (Test-Path $nsis)) {
+            choco install nsis --no-progress -y
+            if ($LASTEXITCODE -ne 0) { throw "NSIS installation failed" }
+          }
+          & $nsis "/DROOT=$PWD" "/DVERSION=$env:VERSION" /V2 "packaging/windows/installer.nsi"
+          if ($LASTEXITCODE -ne 0) { throw "NSIS build failed" }
+          $installer = "dist/EvilRLBot-Windows-x64-Setup.exe"
+          if (-not (Test-Path $installer)) { throw "No installer generated" }
+          Move-Item $installer "dist/EvilRLBot-Windows-$env:VERSION-Setup.exe"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: evilrlbot-windows
+          path: dist/EvilRLBot-Windows-*.*
+          if-no-files-found: error
+          retention-days: 7
+
+  linux:
+    needs: plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download previous tested Linux runtime
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_TAG: ${{ needs.plan.outputs.linux_tag }}
+          BASE_ASSET: ${{ needs.plan.outputs.linux_asset }}
+        run: |
+          mkdir -p build/baselines build/tools
+          gh release download "$BASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern "$BASE_ASSET" --dir build/baselines
+          chmod +x "build/baselines/$BASE_ASSET"
+      - name: Fetch the AppImage packaging tool
+        run: |
+          curl -fL --retry 4 --retry-delay 3 \
+            https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage \
+            -o build/tools/appimagetool-x86_64.AppImage
+          chmod +x build/tools/appimagetool-x86_64.AppImage
+      - name: Rebuild the AppImage with current source
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+          BASE_ASSET: ${{ needs.plan.outputs.linux_asset }}
+        run: |
+          python scripts/release/assemble_linux.py \
+            --baseline "build/baselines/$BASE_ASSET" \
+            --appimagetool "build/tools/appimagetool-x86_64.AppImage" \
+            --version "$VERSION"
+      - name: Validate bundled Linux runtimes
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+        run: |
+          "./dist/EvilRLBot-$VERSION-x86_64.AppImage" --self-test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: evilrlbot-linux
+          path: dist/EvilRLBot-*.AppImage
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    needs: [plan, windows, linux]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: evilrlbot-*
+          merge-multiple: true
+          path: release
+      - name: Publish only when both builds and tests pass
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.plan.outputs.version }}
+          TAG: ${{ needs.plan.outputs.tag }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          test -f "release/EvilRLBot-Windows-$VERSION-Setup.exe"
+          test -f "release/EvilRLBot-Windows-$VERSION-Portable.zip"
+          test -f "release/EvilRLBot-$VERSION-x86_64.AppImage"
+          cat > release-notes.md <<EOF
+          Automated build from commit $COMMIT_SHA.
+
+          - Windows: x64 setup installer and portable ZIP.
+          - Linux: x86_64 AppImage.
+          - Source: this tag points to the exact commit used by the builds.
+
+          Both packages reuse native runtimes, RLBotServer and installed dependencies from the previous tested release and replace application source with this commit.
+          No third-party bot weights or Rocket League files are included. Builds are unsigned.
+          EOF
+          gh release create "$TAG" release/* --repo "$GITHUB_REPOSITORY" \
+            --target "$COMMIT_SHA" --title "Evil RLBot $VERSION" \
+            --notes-file release-notes.md --latest
