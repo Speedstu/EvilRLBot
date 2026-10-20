@@ -1,0 +1,3 @@
+# Install this in .venv-v4, then upgrade flatbuffers as done by setup-env.sh.
+rlbot==1.68.0
+numpy==1.26.4

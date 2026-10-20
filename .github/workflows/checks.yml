@@ -1,0 +1,21 @@
+name: Source checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile Python sources
+        run: python -m compileall -q ui src common v4_runtime tests
+      - name: Assemble Windows source overlay
+        run: python scripts/prepare_windows_source.py
+      - name: Compile Windows source overlay
+        run: python -m compileall -q build/windows-source

@@ -1,0 +1,58 @@
+#:schema https://rlbot.org/schemas/match.json
+[rlbot]
+launcher = "Steam"
+auto_start_agents = true
+wait_for_agents = true
+
+[match]
+game_mode = "Soccar"
+game_map_upk = "Stadium_P"
+skip_replays = true
+instant_start = false
+existing_match_behavior = "Restart"
+enable_rendering = true
+enable_state_setting = true
+auto_save_replay = false
+freeplay = false
+
+[mutators]
+match_length = "FiveMinutes"
+max_score = "Unlimited"
+multi_ball = "One"
+overtime = "Unlimited"
+series_length = "Unlimited"
+game_speed = "Default"
+ball_max_speed = "Default"
+ball_type = "Default"
+ball_weight = "Default"
+ball_size = "Default"
+ball_bounciness = "Default"
+boost_amount = "NormalBoost"
+rumble = "Off"
+boost_strength = "One"
+gravity = "Default"
+demolish = "Default"
+respawn_time = "ThreeSeconds"
+max_time = "Unlimited"
+game_event = "Default"
+audio = "Default"
+ball_gravity = "Default"
+territory = "Off"
+stale_ball = "Unlimited"
+jump = "Default"
+dodge_timer = "OnePointTwentyFiveSeconds"
+possession_score = "Off"
+demolish_score = "Zero"
+normal_goal_score = "One"
+aerial_goal_score = "One"
+assist_goal_score = "Zero"
+input_restriction = "Default"
+
+[[cars]]
+type = "Human"
+team = "Blue"
+
+[[cars]]
+config_file = "src/bot.toml"
+team = "Orange"
+auto_start = true

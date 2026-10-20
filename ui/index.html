@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0d1320">
+<title>Evil RLBot — Match Setup</title>
+<style>
+:root{color-scheme:dark;--base:#0b1019;--panel:#111a28;--panel2:#182336;--line:#2a3b52;--text:#e9f1fb;--muted:#9daec2;--blue:#1278cf;--orange:#e26d19;--green:#2cba72;--focus:#a4bfff}
+*{box-sizing:border-box}body{margin:0;background:#080b13;color:var(--text);font:14px/1.4 Inter,system-ui,Arial,sans-serif}
+button,input,select{font:inherit}button{cursor:pointer;border:1px solid var(--line);color:var(--text);border-radius:7px;background:var(--panel2);padding:8px 12px;font-weight:650}
+button:hover{background:#26364a}button:disabled{opacity:.4;cursor:not-allowed}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.app{max-width:1320px;margin:24px auto;background:var(--base);border:1px solid #29364b;border-radius:13px;overflow:hidden;box-shadow:0 20px 65px #0009}
+header{background:#141e2d;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:13px 23px}
+.brand{display:flex;align-items:center;gap:12px;font-size:21px;font-weight:800;letter-spacing:-.4px}.emblem{width:31px;height:31px;border-radius:9px;background:linear-gradient(145deg,#5bfc92,#00813d);display:grid;place-items:center;color:#062c16;font-size:21px;font-weight:900;box-shadow:0 0 20px #0a88385c}
+.engine{font-size:11px;border:1px solid #285a42;border-radius:20px;color:#72e1a2;padding:4px 9px;font-weight:600}
+header nav{margin-left:auto;display:flex;gap:6px}header nav button{background:transparent}
+main{padding:22px}.head{display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:11px}.head h2{font-size:18px;margin:0}.sub{font-size:12px;color:var(--muted)}
+.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.fill{flex:1}.outline{background:transparent}.plus{background:#0f7644;border-color:#22995a}.plus:hover{background:#168852}
+.playerTypes{border:1px solid var(--line);background:#151f2f;border-radius:9px;padding:14px;margin-bottom:17px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}.chip{padding:9px 12px;background:#263347;border:1px solid #34465e}.chip:hover{background:#354966}
+.libraryWrap{border:1px solid #26364d;border-radius:10px;padding:14px;margin-bottom:16px;background:#0e1623}
+.tabs{display:flex;gap:5px;flex-wrap:wrap}.tab{padding:5px 11px;border-radius:6px;background:transparent;color:var(--muted)}.tab.active{background:#e1e9f3;color:#152132}
+input,select{border:1px solid var(--line);border-radius:7px;color:var(--text);background:#172338;padding:9px 10px}
+#search{min-width:160px;width:230px}.library{display:flex;gap:9px;flex-wrap:wrap;max-height:280px;overflow:auto;margin-top:11px}
+.bot{position:relative;min-width:176px;flex:0 1 217px;padding:11px;border-radius:9px;border:1px solid #2e3e54;background:#192538}
+.bot.active{border-color:#80a6db}.bot.missing{opacity:.6}.botTitle{font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:21px}
+.star{position:absolute;right:10px;top:8px;color:#6f7f92;border:0;background:transparent;padding:2px 5px;font-size:19px}.star.on{color:#f0d762}.star:hover{background:transparent}
+.meta{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 9px}.pill{padding:2px 6px;border-radius:5px;background:#30415b;font-size:11px;color:#c3d2e5}.pill.v4{background:#3c314d;color:#ded0ff}.pill.v5{background:#1b4f53;color:#aaf9f4}
+.small{padding:5px 9px;font-size:12px}.blueBtn{border-color:#267ed0;background:#1e4269}.orangeBtn{border-color:#d97224;background:#634027}.muted{color:var(--muted)}
+.teams{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin:18px 0}.team{border:2px solid;border-radius:11px;overflow:hidden;background:#101827;min-width:0}
+.team.blue{border-color:var(--blue)}.team.orange{border-color:var(--orange)}
+.teamHead{display:flex;align-items:center;justify-content:space-between;padding:10px 13px;font-weight:800;letter-spacing:.3px}
+.blue .teamHead{background:var(--blue)}.orange .teamHead{background:var(--orange)}
+.teamBody{padding:10px;min-height:116px}.slot{display:flex;align-items:center;gap:10px;justify-content:space-between;background:#1d2b3e;border:1px solid #34465c;margin-bottom:7px;border-radius:7px;padding:10px}
+.slot:last-child{margin-bottom:0}.slot strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.slot label{display:block;color:#a1b4ca;font-size:11px}
+.slotActions{display:flex;gap:4px}.slotActions button{padding:4px 7px;font-size:15px;min-width:25px}.teamFooter{border-top:1px solid #2c3b4e;display:flex;gap:5px;padding:9px}.teamFooter button{flex:1}
+.settings{border:1px solid var(--line);border-radius:10px;background:#111a28;padding:15px;margin-top:15px}
+.options{display:grid;grid-template-columns:minmax(180px,1fr) minmax(180px,1fr);gap:11px;margin:12px 0}
+.field label{color:var(--muted);font-size:12px;display:block;margin-bottom:5px}.field select{width:100%}
+.settingsBottom{display:flex;align-items:center;gap:10px;border-top:1px solid #2d3d51;padding-top:13px;flex-wrap:wrap}
+.primary{background:#138746;border-color:#16ac59;padding:11px 22px}.primary:hover{background:#169c52}.danger{background:#962536;border-color:#c7384b}.danger:hover{background:#b62e44}
+.status{font-size:12px;color:#a8b8ca}.status.running{color:#6bec9a}.status.error{color:#ff8b94}
+.footer{color:#7d91aa;font-size:12px;padding:12px 2px 0}.hide{display:none!important}
+.overlay{position:fixed;inset:0;z-index:20;background:#02050bd9;display:none;align-items:center;justify-content:center;padding:18px}.overlay.show{display:flex}
+.modal{width:min(720px,100%);max-height:88vh;overflow:auto;background:#151f2e;border:1px solid #3c506b;padding:21px;border-radius:12px;box-shadow:0 25px 80px #000b}
+.modalTitle{font-size:20px;font-weight:750;margin-bottom:12px}.modal p{color:var(--muted)}.modal pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:56vh;overflow:auto;background:#080d15;padding:13px;border-radius:7px;border:1px solid #29384d;color:#c7d8ec}
+.modal input{width:100%;margin:10px 0}.modalActions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.mutgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.mutgrid .field select{width:100%}
+.check{display:flex;gap:8px;align-items:center;margin:11px 0;color:#cbd6e5}.check input{width:17px;height:17px}
+.toast{position:fixed;right:22px;bottom:22px;z-index:30;background:#2a394f;color:#fff;border:1px solid #57708c;border-radius:8px;box-shadow:0 8px 22px #0008;padding:13px;max-width:360px;display:none}.toast.show{display:block}
+@media(max-width:750px){.app{margin:0;border:0;border-radius:0}.teams,.options,.mutgrid{grid-template-columns:1fr}header{flex-wrap:wrap}header nav{width:100%;margin:0}.engine{margin-left:auto}main{padding:14px}#search{width:100%}.libraryWrap .head{flex-wrap:wrap}.bot{flex:1 1 160px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="brand"><span class="emblem">E</span>Evil RLBot</div>
+  <span class="engine">V5 engine · V4 + V5 bots</span>
+  <nav><button onclick="showLibrary()">Bot Library</button><button onclick="showDiagnostics()">Diagnostics</button><button onclick="showLog()">Logs</button></nav>
+</header>
+<main>
+<section class="playerTypes">
+  <div class="head"><h2>Player Types</h2><span class="sub">Classic RLBot team builder</span></div>
+  <div class="chips">
+    <button class="chip" onclick="addPlayer('human')">🎮 Human</button>
+    <button class="chip" onclick="addPlayer('psyonix','Rookie')">🤖 Psyonix Rookie</button>
+    <button class="chip" onclick="addPlayer('psyonix','Pro')">🤖 Psyonix Pro</button>
+    <button class="chip" onclick="addPlayer('psyonix','Allstar')">🤖 Psyonix Allstar</button>
+    <button class="chip plus" onclick="showImport()">＋ Import bot V4 / V5</button>
+  </div>
+</section>
+<section class="libraryWrap" id="libraryWrap">
+ <div class="head">
+  <div class="row"><h2>Bot Library</h2><span class="sub" id="botCount"></span></div>
+  <div class="row"><input id="search" type="search" placeholder="Search bots..." oninput="renderBots()"><button class="small outline" onclick="loadBots()">↻ Refresh</button></div>
+ </div>
+ <div class="tabs">
+  <button class="tab active" data-tab="All" onclick="setTab(this)">All</button>
+  <button class="tab" data-tab="Standard" onclick="setTab(this)">Standard</button>
+  <button class="tab" data-tab="ML" onclick="setTab(this)">ML / RLGym</button>
+  <button class="tab" data-tab="Favorites" onclick="setTab(this)">★ Favorites</button>
+ </div>
+ <div id="library" class="library"></div>
+</section>
+<div class="head"><h2>Teams</h2><div class="row"><button class="small outline" onclick="usePreset(1)">1v1 preset</button><button class="small outline" onclick="usePreset(2)">2v2 preset</button><button class="small outline" onclick="clearTeams()">Reset teams</button></div></div>
+<div class="teams">
+ <section class="team blue" ondragover="event.preventDefault()" ondrop="dropBot(event,0)"><div class="teamHead"><span>BLUE TEAM</span><span id="blueCount">0 PLAYERS</span></div><div id="blueSlots" class="teamBody"></div><div class="teamFooter"><button class="small" onclick="addSelected(0)">＋ Selected bot</button><button class="small" onclick="addPlayer('psyonix','Pro',0)">＋ AI</button></div></section>
+ <section class="team orange" ondragover="event.preventDefault()" ondrop="dropBot(event,1)"><div class="teamHead"><span>ORANGE TEAM</span><span id="orangeCount">0 PLAYERS</span></div><div id="orangeSlots" class="teamBody"></div><div class="teamFooter"><button class="small" onclick="addSelected(1)">＋ Selected bot</button><button class="small" onclick="addPlayer('psyonix','Pro',1)">＋ AI</button></div></section>
+</div>
+<section class="settings">
+ <div class="head"><h2>Match Settings</h2><span class="sub">Native RLBot v5 match configuration</span></div>
+ <div class="options">
+  <div class="field"><label for="map">Arena</label><select id="map" onchange="changeSetting()">
+   <option value="Stadium_P">DFH Stadium</option><option value="EuroStadium_P">Mannfield</option><option value="TrainStation_P">Urban Central</option>
+   <option value="UtopiaStadium_P">Utopia Coliseum</option><option value="HoopsStadium_P">Dunk House</option>
+   <option value="Labs_Utopia_P">Labs Utopia</option><option value="Park_P">Beckwith Park</option><option value="Underpass_P">Underpass</option>
+  </select></div>
+  <div class="field"><label for="mode">Game Mode</label><select id="mode" onchange="changeSetting()">
+   <option value="Soccar">Soccar</option><option value="Hoops">Hoops</option><option value="Dropshot">Dropshot</option>
+   <option value="Snowday">Snow Day</option><option value="Rumble">Rumble</option><option value="Heatseeker">Heatseeker</option>
+  </select></div>
+ </div>
+ <div class="settingsBottom">
+  <button class="outline" onclick="showMutators()">⚙ Mutators</button>
+  <button class="outline" onclick="showExtras()">Extra settings</button>
+  <span class="fill"></span>
+  <span id="status" class="status">Idle</span>
+  <button id="startBtn" class="primary" onclick="startMatch()">▶ Start Match</button>
+  <button class="danger" onclick="stopMatch()">■ Stop</button>
+ </div>
+</section>
+<div class="footer">V4 bots keep the real RLBot 1.68 Python API via a bridge; V5 bots connect directly to the V5 engine. The UI operates locally on 127.0.0.1.</div>
+</main>
+</div>
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+ <div class="modal"><div class="row"><div class="modalTitle" id="modalTitle"></div><span class="fill"></span><button class="small outline" onclick="closeModal()">✕</button></div><div id="modalBody"></div></div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const $=id=>document.getElementById(id);
+const DEFAULT_MUT={match_length:'FiveMinutes',max_score:'Unlimited',boost_amount:'NormalBoost',ball_size:'Default',gravity:'Default',game_speed:'Default',overtime:'Unlimited',series_length:'Unlimited',ball_max_speed:'Default',ball_type:'Default',ball_weight:'Default',ball_bounciness:'Default',rumble:'Off',boost_strength:'One',demolish:'Default',respawn_time:'ThreeSeconds'};
+const DEFAULT_OPT={skip_replays:true,instant_start:false,enable_rendering:true,enable_state_setting:true,auto_save_replay:false};
+const MUT_OPTIONS={
+ match_length:[['FiveMinutes','5 minutes'],['TenMinutes','10 minutes'],['TwentyMinutes','20 minutes'],['Unlimited','Unlimited']],
+ max_score:[['Unlimited','Unlimited'],['OneGoal','1 goal'],['ThreeGoals','3 goals'],['FiveGoals','5 goals']],
+ boost_amount:[['NormalBoost','Normal'],['UnlimitedBoost','Unlimited boost'],['SlowRecharge','Slow recharge'],['RapidRecharge','Fast recharge'],['NoBoost','No boost']],
+ ball_size:[['Default','Default'],['Small','Small'],['Large','Large'],['Gigantic','Gigantic']],
+ gravity:[['Default','Default'],['Low','Low'],['High','High'],['SuperHigh','Super high']],
+ game_speed:[['Default','Default'],['SloMo','Slow motion'],['TimeWarp','Time Warp']],
+ overtime:[['Unlimited','Unlimited'],['FiveMaxFirstScore','+5 max, first goal'],['FiveMaxRandomTeam','+5 max, random winner']],
+ series_length:[['Unlimited','Unlimited'],['ThreeGames','Best of 3'],['FiveGames','Best of 5'],['SevenGames','Best of 7']],
+ ball_max_speed:[['Default','Default'],['Slow','Slow'],['Fast','Fast'],['SuperFast','Super fast']],
+ ball_type:[['Default','Default'],['Cube','Cube'],['Puck','Puck'],['Basketball','Basketball']],
+ ball_weight:[['Default','Default'],['Light','Light'],['Heavy','Heavy'],['SuperLight','Super light']],
+ ball_bounciness:[['Default','Default'],['Low','Low'],['High','High'],['SuperHigh','Super high']],
+ rumble:[['Off','Off'],['DefaultRumble','Default Rumble'],['Slow','Slow'],['Civilized','Civilized'],['DestructionDerby','Destruction Derby'],['SpringLoaded','Spring Loaded'],['SpikesOnly','Spikes Only'],['SpikeRush','Spike Rush']],
+ boost_strength:[['One','1x'],['OneAndAHalf','1.5x'],['Two','2x'],['Ten','10x']],
+ demolish:[['Default','Default'],['Disabled','Disabled'],['FriendlyFire','Friendly fire'],['OnContact','On contact'],['OnContactFf','On contact (friendly fire)']],
+ respawn_time:[['ThreeSeconds','3 seconds'],['TwoSeconds','2 seconds'],['OneSecond','1 second'],['DisableGoalReset','Disable goal reset']]
+};
+const MUT_LABEL={match_length:'Match length',max_score:'Max score',boost_amount:'Boost amount',ball_size:'Ball size',gravity:'Gravity',game_speed:'Game speed',overtime:'Overtime',series_length:'Series length',ball_max_speed:'Ball max speed',ball_type:'Ball type',ball_weight:'Ball weight',ball_bounciness:'Ball bounciness',rumble:'Rumble',boost_strength:'Boost strength',demolish:'Demolitions',respawn_time:'Respawn time'};
+const OPT_LABEL={skip_replays:'Skip goal replays',instant_start:'Start immediately',enable_rendering:'Allow bot rendering',enable_state_setting:'Allow state setting',auto_save_replay:'Automatically save replay'};
+let bots=[], selectedId=null, tab='All', setup={players:[],map:'Stadium_P',mode:'Soccar',mutators:{...DEFAULT_MUT},options:{...DEFAULT_OPT}};
+let saveTimer=null, savedSetup='', toastTimer=null;
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function jsString(s){return esc(JSON.stringify(s))}
+async function api(path,data){const options=data===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)};const r=await fetch(path,options);const t=await r.json();if(!r.ok)throw Error(t.error||r.statusText);return t}
+function notify(message){$('toast').textContent=message;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),4000)}
+function openModal(title,html){$('modalTitle').textContent=title;$('modalBody').innerHTML=html;$('overlay').classList.add('show')}
+function closeModal(){$('overlay').classList.remove('show')}
+function showLibrary(){$('libraryWrap').scrollIntoView({behavior:'smooth'})}
+function setTab(el){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));el.classList.add('active');tab=el.dataset.tab;renderBots()}
+function renderBots(){
+ const q=$('search').value.toLowerCase(), shown=bots.filter(b=>(tab==='All'||tab==='Favorites'&&b.favorite||b.category===tab)&&(!q||(b.name+' '+b.path+' '+b.diagnostics?.framework+' '+b.diagnostics?.observation).toLowerCase().includes(q)));
+ $('botCount').textContent=bots.length+' imported';
+ $('library').innerHTML=shown.length?shown.map(b=>{
+  const d=b.diagnostics||{},f=d.framework||'unknown',v=f.includes('v4')?'v4':'v5';
+  return '<div draggable="true" ondragstart="beginBotDrag(event,'+jsString(b.id)+')" class="bot '+(b.id===selectedId?'active ':'')+(!b.exists?'missing':'')+'"><button class="star '+(b.favorite?'on':'')+'" title="Favorite" onclick="favorite('+jsString(b.id)+')">★</button>'
+   +'<div class="botTitle" title="'+esc(b.path)+'">'+esc(b.name)+'</div><div class="meta"><span class="pill '+v+'">'+esc(f)+'</span>'
+   +(d.observation&&d.observation!=='unknown'?'<span class="pill">'+esc(d.observation)+'</span>':'')
+   +(!b.exists?'<span class="pill">Missing</span>':'')+'</div>'
+   +'<div class="row"><button class="small blueBtn" onclick="addBot('+jsString(b.id)+',0)">＋ Blue</button>'
+   +'<button class="small orangeBtn" onclick="addBot('+jsString(b.id)+',1)">＋ Orange</button>'
+   +'<button class="small outline" title="Diagnostics" onclick="selectedId='+jsString(b.id)+';showDiagnostics()">ⓘ</button></div></div>';
+ }).join(''):'<div class="muted" style="padding:10px">No bots in this filter. Import a V4 bot.cfg or V5 bot.toml.</div>'
+}
+function renderTeams(){
+ for(const team of [0,1]){
+  const slots=setup.players.map((p,i)=>({...p,i})).filter(p=>p.team===team);
+  $(''+(team===0?'blue':'orange')+'Count').textContent=slots.length+' PLAYER'+(slots.length===1?'':'S');
+  $(''+(team===0?'blue':'orange')+'Slots').innerHTML=slots.length?slots.map(p=>{
+   const b=bots.find(x=>x.id===p.id);
+   const name=p.kind==='human'?'Human':p.kind==='psyonix'?'Psyonix '+p.skill:b?.name||'Missing bot';
+   const desc=p.kind==='bot'?b?.diagnostics?.framework||'RLBot':'Local player';
+   return '<div class="slot"><div style="min-width:0"><strong>'+esc((p.kind==='human'?'🎮 ':'🤖 ')+name)+'</strong><label>'+esc(desc)+'</label></div><div class="slotActions">'
+    +'<button title="Move to other team" onclick="movePlayer('+p.i+')">⇄</button>'
+    +'<button title="Duplicate" onclick="duplicatePlayer('+p.i+')">＋</button>'
+    +'<button title="Remove" onclick="removePlayer('+p.i+')">×</button></div></div>'
+  }).join(''):'<div class="muted" style="padding:20px 8px">No players. Select from Player Types or Bot Library.</div>';
+ }
+}
+function render(){renderBots();renderTeams();$('map').value=setup.map;$('mode').value=setup.mode}
+function persist(){
+ clearTimeout(saveTimer);saveTimer=setTimeout(async()=>{if(setup.players.length===0)return;const s=JSON.stringify(setup);if(s===savedSetup)return;try{await api('/api/setup',setup);savedSetup=s}catch(e){notify('Could not save setup: '+e.message)}},350)
+}
+function mutate(){render();persist()}
+function validAdd(kind){
+ if(setup.players.length>=10){notify('Maximum 10 players per match');return false}
+ if(kind==='human'&&setup.players.some(p=>p.kind==='human')){notify('Only one local Human is supported. Use Psyonix or RLBot for other slots.');return false}
+ return true
+}
+function addPlayer(kind,skill='Pro',team){
+ if(!validAdd(kind))return;
+ if(team===undefined)team=setup.players.filter(p=>p.team===0).length<=setup.players.filter(p=>p.team===1).length?0:1;
+ const p={kind,team};if(kind==='psyonix')p.skill=skill;setup.players.push(p);mutate()
+}
+function addBot(id,team){if(!validAdd('bot'))return;selectedId=id;setup.players.push({kind:'bot',id,team});mutate()}
+function beginBotDrag(event,id){event.dataTransfer.setData('text/plain',id);event.dataTransfer.effectAllowed='copy'}
+function dropBot(event,team){event.preventDefault();const id=event.dataTransfer.getData('text/plain');if(bots.some(b=>b.id===id))addBot(id,team)}
+function addSelected(team){if(!selectedId)return notify('Choose a bot from Bot Library first');addBot(selectedId,team)}
+function removePlayer(i){if(setup.players.length===1)return notify('At least one player is required');setup.players.splice(i,1);mutate()}
+function duplicatePlayer(i){const p=setup.players[i];if(!validAdd(p.kind))return;setup.players.splice(i+1,0,{...p});mutate()}
+function movePlayer(i){setup.players[i].team=1-setup.players[i].team;mutate()}
+function clearTeams(){setup.players=[{kind:'human',team:0}];mutate()}
+function usePreset(n){
+ const id=selectedId||bots[0]?.id;
+ const second=id?{kind:'bot',id,team:1}:{kind:'psyonix',team:1,skill:'Allstar'};
+ setup.players=[{kind:'human',team:0},second];
+ if(n===2){setup.players.push(id?{kind:'bot',id,team:0}:{kind:'psyonix',team:0,skill:'Pro'});setup.players.push({kind:'psyonix',team:1,skill:'Allstar'})}
+ mutate()
+}
+function changeSetting(){setup.map=$('map').value;setup.mode=$('mode').value;persist()}
+async function favorite(id){try{await api('/api/favorite',{id});await loadBots()}catch(e){notify(e.message)}}
+async function loadBots(){try{bots=await api('/api/bots');if(!bots.some(b=>b.id===selectedId))selectedId=bots[0]?.id||null;render()}catch(e){notify(e.message)}}
+function showImport(){
+ openModal('Import a V4 or V5 bot','<p>Add an existing bot folder, a V4 <strong>bot.cfg</strong>, a V5 <strong>bot.toml</strong>, or a Python bot entrypoint. This only adds a reference; bot files remain untouched.</p>'
+  +'<input id="importPath" placeholder="/home/uwucode/Bots/my-bot/bot.cfg" autocomplete="off">'
+  +'<div class="modalActions"><button onclick="choosePath(\'file\')">Browse file…</button><button onclick="choosePath(\'folder\')">Browse folder…</button><button class="plus" onclick="importBot()">Import bot</button></div>')
+ $('importPath').focus()
+}
+async function choosePath(kind){try{const r=await api('/api/pick',{kind});if(r.path)$('importPath').value=r.path;else if(r.error)notify(r.error)}catch(e){notify(e.message)}}
+async function importBot(){
+ const path=$('importPath').value.trim();if(!path)return notify('Enter a file or folder path');
+ try{const b=await api('/api/add',{path});selectedId=b.id;closeModal();await loadBots();notify('Imported '+b.name)}catch(e){notify(e.message)}
+}
+function showDiagnostics(){
+ const b=bots.find(x=>x.id===selectedId)||bots[0];if(!b)return notify('Import a bot first');
+ openModal('Diagnostics — '+b.name,'<p>'+esc(b.path)+'</p><pre>'+esc(JSON.stringify(b.diagnostics,null,2))+'</pre>'
+  +'<div class="modalActions"><button onclick="removeBot('+jsString(b.id)+')">Remove from Library</button></div>')
+}
+async function removeBot(id){
+ if(!confirm('Remove from library? Bot files will not be deleted.'))return;
+ try{await api('/api/remove',{id});setup.players=setup.players.filter(p=>p.id!==id);if(!setup.players.length)setup.players.push({kind:'human',team:0});closeModal();await loadBots();mutate()}catch(e){notify(e.message)}
+}
+async function showLog(){try{const x=await api('/api/log');openModal('Match log','<pre>'+esc(x.text||'No match log yet.')+'</pre><div class="modalActions"><button onclick="showLog()">Refresh log</button></div>')}catch(e){notify(e.message)}}
+function settingSelect(id,options,label,val){return '<div class="field"><label for="'+esc(id)+'">'+esc(label)+'</label><select id="'+esc(id)+'">'+options.map(o=>'<option value="'+esc(o[0])+'" '+(o[0]===val?'selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select></div>'}
+function showMutators(){
+ openModal('Mutators','<div class="mutgrid">'+Object.entries(MUT_OPTIONS).map(([id,opts])=>settingSelect('mut_'+id,opts,MUT_LABEL[id],setup.mutators[id]||DEFAULT_MUT[id])).join('')+'</div>'
+  +'<div class="modalActions" style="margin-top:18px"><button onclick="resetMutators()">Reset defaults</button><button class="plus" onclick="applyMutators()">Save mutators</button></div>')
+}
+function applyMutators(){Object.keys(MUT_OPTIONS).forEach(k=>setup.mutators[k]=$('mut_'+k).value);closeModal();persist();notify('Mutators saved')}
+function resetMutators(){setup.mutators={...DEFAULT_MUT};showMutators();persist()}
+function showExtras(){
+ openModal('Extra match settings',Object.keys(OPT_LABEL).map(k=>'<label class="check"><input type="checkbox" id="opt_'+k+'" '+(setup.options[k]?'checked':'')+'><span>'+esc(OPT_LABEL[k])+'</span></label>').join('')
+  +'<div class="modalActions"><button class="plus" onclick="applyExtras()">Save settings</button></div>')
+}
+function applyExtras(){Object.keys(OPT_LABEL).forEach(k=>setup.options[k]=$('opt_'+k).checked);closeModal();persist();notify('Extra settings saved')}
+async function startMatch(){
+ $('startBtn').disabled=true;$('status').textContent='Starting…';
+ try{const r=await api('/api/start',setup);savedSetup=JSON.stringify(setup);$('status').textContent='Launching · PID '+r.pid;notify('V5 match launched. Waiting for Rocket League…')}catch(e){$('status').textContent='Launch failed';$('status').className='status error';notify('Match error: '+e.message)}
+ finally{$('startBtn').disabled=false}
+}
+async function stopMatch(){try{await api('/api/stop',{});await updateStatus()}catch(e){notify(e.message)}}
+async function updateStatus(){try{const s=await api('/api/status');$('status').className='status '+(s.running?'running':s.exit_code?'error':'');$('status').textContent=s.running?'Running · PID '+s.pid:s.exit_code?'Exited with code '+s.exit_code:'Idle'}catch{}}
+async function init(){
+ await loadBots();
+ try{const s=await api('/api/setup');setup={players:s.players,map:s.map,mode:s.mode,mutators:{...DEFAULT_MUT,...s.mutators},options:{...DEFAULT_OPT,...s.options}};savedSetup=JSON.stringify(setup);render()}catch(e){notify('Could not restore match: '+e.message)}
+ await updateStatus();setInterval(updateStatus,1700)
+}
+window.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+init();
+</script>
+</body></html>

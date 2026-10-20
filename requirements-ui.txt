@@ -1,0 +1,9 @@
+# Native Qt Widgets UI; no Electron, no Chromium, no web frontend.
+PySide6-Essentials>=6.8,<6.12
+
+# Safely unpack supported RLBot .7z bot packs; preserve TOML metadata for per-bot deps.
+py7zr>=0.22,<2
+tomli-w>=1.2,<2
+
+# RAR5 archives (e.g. Yukan bot packs) via system libarchive.
+libarchive-c>=5.1,<6

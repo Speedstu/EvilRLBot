@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Evil RLBot
+Comment=RLBot V4/V5 classic desktop launcher
+Exec=evil-rlbot
+Icon=evil-rlbot
+Terminal=false
+Type=Application
+Categories=Game;
+StartupWMClass=evil-rlbot

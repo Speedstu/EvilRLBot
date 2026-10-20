@@ -1,0 +1,47 @@
+# Local environments, downloads and builds
+.venv/
+.venv-v4/
+venv/
+runtime/
+build/
+release/
+dist/
+.generated/
+.references/
+logs/
+*.AppImage
+*.exe
+*.dll
+*.so
+*.dylib
+*.pdb
+*.whl
+*.zip
+*.7z
+*.rar
+
+# Imported bots, saved models and user-specific configuration
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.lt
+*.pkl
+*.safetensors
+*.replay
+*.log
+config/library.json
+config/match-setup.json
+
+# Editor/Python noise
+__pycache__/
+*.py[cod]
+*.bak
+*.bak-*
+*.202610*
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.vscode/
+.idea/
+.DS_Store

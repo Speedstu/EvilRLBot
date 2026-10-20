@@ -1,0 +1,17 @@
+#:schema https://rlbot.org/schemas/agent.json
+[settings]
+name = "Evil RLBot (exact v4 frontend)"
+loadout_file = "loadout.toml"
+root_dir = ""
+run_command = "bash start_bridge.sh"
+run_command_linux = "bash start_bridge.sh"
+agent_id = "evilrlbot/evil_v4_exact"
+logo_file = ""
+
+[details]
+description = "Exact RLBot v4 Python frontend running through an IPC bridge on the RLBot v5 engine with native Linux support."
+fun_fact = "real rlbot 1.68 frontend, v5 backend"
+source_link = ""
+developer = "uwucode"
+language = "Python"
+tags = ["1v1"]
