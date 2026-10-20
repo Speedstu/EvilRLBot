@@ -401,7 +401,7 @@ def _cache_key(requirements: Path, framework: str, backend: str) -> str | None:
     data = requirements.read_text(encoding="utf-8", errors="replace")
     for line in data.splitlines():
         line = line.strip()
-        if not line or line.startswith("#"):
+        if not line or line.startswith("#") or _ignorable_requirement(line):
             continue
         if line.startswith(("-", "git+", ".", "/", "https:", "http:")):
             return None
@@ -476,6 +476,22 @@ def remember_torch_choice(config_path: Path, backend: str) -> None:
     tmp.replace(TORCH_CHOICES / ident)
 
 
+PIP_TOOLS = frozenset({"pip", "setuptools", "wheel"})
+
+
+def _ignorable_requirement(line: str) -> bool:
+    """Lines from RLBot's standard requirements.txt template that are safe to skip.
+
+    The template points pip at PyTorch's download page and asks to upgrade pip.
+    Evil RLBot picks the CPU or CUDA PyTorch source itself and ships its own
+    pip, so neither changes what gets installed.
+    """
+    lowered = line.lower()
+    if lowered.startswith(("--find-links", "-f ", "--extra-index-url", "--index-url", "-i ")):
+        return "download.pytorch.org" in lowered
+    return lowered.replace("_", "-") in PIP_TOOLS
+
+
 def _torch_specs(requirements: Path) -> tuple[list[str], list[str], bool]:
     """Split simple requirements; leave complex pip directives on legacy path.
 
@@ -487,7 +503,7 @@ def _torch_specs(requirements: Path) -> tuple[list[str], list[str], bool]:
     torch, rest = [], []
     for raw in requirements.read_text(encoding="utf8", errors="replace").splitlines():
         line = raw.strip()
-        if not line or line.startswith("#"):
+        if not line or line.startswith("#") or _ignorable_requirement(line):
             continue
         if line.startswith(("-", ".", "/", "http:", "https:", "git+")):
             return [], [], False
