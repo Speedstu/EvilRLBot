@@ -9,6 +9,9 @@ ROOT = Path(__file__).resolve().parent
 MATCH_CONFIG = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "rlbot.toml"
 
 if __name__ == "__main__":
+    if sys.platform == "linux":
+        from ui.portable_linux import configure_wine_for_match
+        configure_wine_for_match(MATCH_CONFIG)
     manager = MatchManager(ROOT / "RLBotServer")
     manager.start_match(MATCH_CONFIG)
     try:

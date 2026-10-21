@@ -222,12 +222,13 @@ def _v5_toml(path: Path) -> Candidate | None:
         settings = data.get("settings")
         if not isinstance(settings, dict) or not any(k in settings for k in ("run_command", "run_command_linux", "agent_id")):
             return None
-        runnable = settings.get("run_command_linux") or settings.get("run_command")
+        runnable = settings.get("run_command_linux") or settings.get("run_command") or settings.get("run_command_windows")
         req = path.parent / "requirements.txt"
         name = str(settings.get("name") or path.parent.name)
         warn = "" if runnable else "No runnable command in bot.toml"
-        if runnable and (".exe" in str(runnable).lower() or ".bat" in str(runnable).lower()) and not settings.get("run_command_linux"):
-            warn = "Windows-only run command: Linux wrapper is required."
+        # RLBot v5 already supports Windows executables through Wine when
+        # run_command_linux is absent. The match builder must preserve that
+        # fallback rather than rejecting this bot before the engine starts.
         return Candidate(path, "rlbot-v5", name, req if req.is_file() else None, warn)
     except (OSError, ValueError, TypeError):
         return None

@@ -34,9 +34,11 @@ class V4WorkerIsolationTests(unittest.TestCase):
             self.assertNotIn('export PYTHONPATH=', wrapper)
             self.assertTrue(out.is_file())
 
-    def test_v4_worker_is_launched_in_isolated_mode(self):
+    def test_v4_worker_is_isolated_when_using_bundled_python(self):
         bridge = (ROOT / 'src/v5_bridge.py').read_text()
-        self.assertIn('"-I",\n                str(ROOT / "v4_runtime" / "worker.py")', bridge)
+        self.assertIn('str(ROOT / "v4_runtime" / "worker.py")', bridge)
+        self.assertIn('bundled_python("rlbot-v4")', bridge)
+        self.assertIn('"-I"', bridge)
 
 if __name__ == '__main__':
     unittest.main()

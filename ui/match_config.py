@@ -63,14 +63,21 @@ def _v5_with_deps(original: Path, agent: Path, per_player: Path) -> Path:
     settings = cfg.get("settings")
     if not isinstance(settings, dict):
         raise ValueError(f"Invalid V5 agent settings: {agent}")
-    cmd = settings.get("run_command_linux") or settings.get("run_command")
+    cmd = settings.get("run_command_linux") or settings.get("run_command") or settings.get("run_command_windows")
     if not cmd:
         raise ValueError(f"Bot has no Linux run command: {agent}")
     original_root = (agent.parent / (settings.get("root_dir") or ".")).resolve()
     bridge = original.suffix.lower() == ".cfg"
     paths = []
     python = ROOT / ".venv/bin/python"
-    if not bridge:
+    from ui.portable_linux import classify
+    compiled_windows_agent = (
+        not settings.get("run_command_linux") and
+        classify(str(cmd)) == "windows-binary"
+    )
+    # Frozen Windows agents ship their own runtime; their requirements.txt
+    # may not be installable on Linux. RLBotServer handles these under Wine.
+    if not bridge and not compiled_windows_agent:
         candidates = discover(original)
         candidate = next((c for c in candidates if c.path == original),
                          candidates[0] if candidates else None)
@@ -86,6 +93,21 @@ def _v5_with_deps(original: Path, agent: Path, per_player: Path) -> Path:
         python = selected.python
         paths = [str(p) for p in (selected.framework_site, deps, shared)
                  if p is not None and p.is_dir()]
+    from ui.portable_linux import select_command
+    cmd, original_root, needs_wrapper = select_command(settings, agent, python)
+    if not needs_wrapper:
+        # Leave the native v5 server's built-in Wine fallback intact. A Linux
+        # shell wrapper would incorrectly attempt to execute Nox.exe as ELF.
+        settings["root_dir"] = str(original_root)
+        settings["run_command"] = cmd
+        settings.pop("run_command_linux", None)
+        if settings.get("loadout_file"):
+            settings["loadout_file"] = str((agent.parent / settings["loadout_file"]).resolve())
+        settings["agent_id"] = str(settings.get("agent_id", "evilrlbot/agent")) + "/" + hashlib.sha256(str(per_player).encode()).hexdigest()[:10]
+        generated = per_player / "agent_v5.toml"
+        generated.write_text(tomli_w.dumps(cfg), encoding="utf8")
+        return generated
+
     wrapper = per_player / "run_v5.sh"
     extra = (f"export PYTHONPATH={shlex.quote(':'.join(paths))}:$PYTHONPATH\n"
              if paths else "")

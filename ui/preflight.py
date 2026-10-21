@@ -218,6 +218,18 @@ def check_bots(setup: dict, paths: dict[str, str]) -> list[str]:
         if candidate.warning:
             problems.append(f"{candidate.name}: {candidate.warning}")
             continue
+        # Frozen Windows bots are standalone executables. They don't require
+        # Linux Python packages; RLBotServer can start them using Wine.
+        if candidate.framework == "rlbot-v5" and path.suffix.lower() == ".toml":
+            try:
+                from ui.portable_linux import classify
+                with path.open("rb") as handle:
+                    cfg = tomllib.load(handle).get("settings") or {}
+                if not cfg.get("run_command_linux") and classify(
+                        str(cfg.get("run_command") or cfg.get("run_command_windows") or "")) == "windows-binary":
+                    continue
+            except (OSError, ValueError, TypeError):
+                pass
         modules = _required_modules(path, candidate)
         if not modules and not _requirement_specs(candidate.requirements):
             continue
