@@ -1121,6 +1121,8 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("Evil RLBot")
     app.setDesktopFileName("evil-rlbot")
+    # Linux docks also use the QApplication-level icon.
+    app.setWindowIcon(logo_icon())
     app.setStyle("Fusion")
     app.styleHints().setColorScheme(Qt.ColorScheme.Dark)
     app.setStyleSheet(CSS)

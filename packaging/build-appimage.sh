@@ -6,7 +6,7 @@ OUTDIR="${1:-$ROOT/dist}"
 APPDIR="$ROOT/build/EvilRLBot.AppDir"
 mkdir -p "$OUTDIR"
 rm -rf "$APPDIR"
-mkdir -p "$APPDIR/usr/share/evilrlbot/runtime" "$APPDIR/usr/share/icons/hicolor/128x128/apps"
+mkdir -p "$APPDIR/usr/share/evilrlbot/runtime" "$APPDIR/usr/share/icons/hicolor/128x128/apps" "$APPDIR/usr/share/icons/hicolor/512x512/apps"
 RUNTIME="$APPDIR/usr/share/evilrlbot/runtime"
 # Selective packaging: never include .git, secrets, games, user bot weights,
 # checkpoints, captured logs, cached source archives, or private browser data.
@@ -40,8 +40,12 @@ done
 rm -rf "$RUNTIME/.venv/lib/python3.12/site-packages/playwright"        "$RUNTIME/.venv/lib/python3.12/site-packages/playwright-"*.dist-info        "$RUNTIME/.venv/lib/python3.12/site-packages/playwright-"*.data
 cp -a "$ROOT/packaging/AppRun" "$APPDIR/AppRun"
 cp -a "$ROOT/packaging/evil-rlbot.desktop" "$APPDIR/evil-rlbot.desktop"
-cp -a "$ROOT/ui/evilrlbot-icon.png" "$APPDIR/usr/share/icons/hicolor/128x128/apps/evil-rlbot.png"
-ln -s usr/share/icons/hicolor/128x128/apps/evil-rlbot.png "$APPDIR/evil-rlbot.png"
+mkdir -p "$APPDIR/usr/share/applications"
+# Desktop integration must use the same shield as the Qt window.
+cp -a "$ROOT/packaging/evil-rlbot.desktop" "$APPDIR/usr/share/applications/evil-rlbot.desktop"
+cp -a "$ROOT/packaging/icons/evil-rlbot-128.png" "$APPDIR/usr/share/icons/hicolor/128x128/apps/evil-rlbot.png"
+cp -a "$ROOT/ui/assets/logo.png" "$APPDIR/usr/share/icons/hicolor/512x512/apps/evil-rlbot.png"
+ln -s usr/share/icons/hicolor/512x512/apps/evil-rlbot.png "$APPDIR/evil-rlbot.png"
 ln -s evil-rlbot.png "$APPDIR/.DirIcon"
 chmod +x "$RUNTIME/RLBotServer"
 ARCH=x86_64 VERSION="$VERSION" "$ROOT/build/tools/appimagetool-x86_64.AppImage"  "$APPDIR" "$OUTDIR/EvilRLBot-$VERSION-x86_64.AppImage"

@@ -150,6 +150,14 @@ jobs:
           APPIMAGE_EXTRACT_AND_RUN: '1'
         run: |
           "./dist/EvilRLBot-$VERSION-x86_64.AppImage" --self-test
+      - name: Verify packaged Linux dock icon
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          mkdir -p build/verify-appimage
+          cd build/verify-appimage
+          "$GITHUB_WORKSPACE/dist/EvilRLBot-$VERSION-x86_64.AppImage" --appimage-extract >/dev/null
+          python "$GITHUB_WORKSPACE/scripts/release/check_linux_icon.py" squashfs-root
       - uses: actions/upload-artifact@v4
         with:
           name: evilrlbot-linux

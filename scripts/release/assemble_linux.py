@@ -56,6 +56,49 @@ def build(baseline: Path, appimagetool: Path, version: str) -> None:
         if source.exists():
             shutil.copy2(source, runtime / file_name)
 
+    # Keep the app's actual Qt window icon, AppImage's .DirIcon and the
+    # desktop/theme icon in sync with the current GUI shield logo.
+    # The previous AppImage bundled the legacy green E icon at the root;
+    # copying Python/UI sources alone never replaced those system icons.
+    logo = ROOT / "ui/assets/logo.png"             # 512x512 RGBA
+    small = ROOT / "packaging/icons/evil-rlbot-128.png"
+    if not logo.is_file() or not small.is_file():
+        raise RuntimeError("Missing official Evil RLBot shield icons")
+    icon_files = (
+        (small, appdir / "usr/share/icons/hicolor/128x128/apps/evil-rlbot.png"),
+        (logo, appdir / "usr/share/icons/hicolor/512x512/apps/evil-rlbot.png"),
+    )
+    for source, destination in icon_files:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if destination.is_symlink():
+            destination.unlink()
+        shutil.copy2(source, destination)
+    desktop = ROOT / "packaging/evil-rlbot.desktop"
+    metadata = desktop.read_text(encoding="utf-8")
+    for field in ("Icon=evil-rlbot", "StartupWMClass=evil-rlbot"):
+        if field not in metadata:
+            raise RuntimeError(f"Desktop icon metadata missing {field}")
+    for dest in (appdir / "evil-rlbot.desktop",
+                 appdir / "usr/share/applications/evil-rlbot.desktop"):
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        if dest.is_symlink():
+            dest.unlink()
+        shutil.copy2(desktop, dest)
+    app_icon = appdir / "evil-rlbot.png"
+    if app_icon.exists() or app_icon.is_symlink():
+        app_icon.unlink()
+    app_icon.symlink_to("usr/share/icons/hicolor/512x512/apps/evil-rlbot.png")
+    dir_icon = appdir / ".DirIcon"
+    if dir_icon.exists() or dir_icon.is_symlink():
+        dir_icon.unlink()
+    dir_icon.symlink_to("evil-rlbot.png")
+    # Check both resolution variants and icon entrypoints before packaging.
+    import hashlib
+    digest = lambda p: hashlib.sha256(p.read_bytes()).digest()
+    assert digest(app_icon) == digest(logo)
+    assert digest(appdir / "usr/share/icons/hicolor/128x128/apps/evil-rlbot.png") == digest(small)
+    assert digest(dir_icon) == digest(logo)
+
     apprun_text = bootstrap.read_text(encoding="utf-8")
     match = re.search(r'^VERSION="(\d{4}\.\d{1,2}\.\d{1,2}\.\d+)"$', apprun_text, re.M)
     if not match:
