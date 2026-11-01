@@ -11,10 +11,30 @@ import argparse
 import os
 from pathlib import Path
 import re
+import stat
 import shutil
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def make_appdir_readable(appdir: Path) -> None:
+    """Ensure extracted runtime is accessible to every AppImage user.
+
+    The upstream baseline can have 0700 directories from a private previous
+    build. Current appimagetool refuses those because users other than the
+    packager would be unable to traverse the extracted filesystem.
+    Do not follow symlinks or modify files outside AppDir.
+    """
+    for path in [appdir, *appdir.rglob("*")]:
+        mode = path.lstat().st_mode
+        if stat.S_ISDIR(mode):
+            path.chmod((mode & 0o7777) | 0o555)
+        elif stat.S_ISREG(mode):
+            public_bits = 0o555 if mode & 0o111 else 0o444
+            path.chmod((mode & 0o7777) | public_bits)
+
+
 
 def build(baseline: Path, appimagetool: Path, version: str) -> None:
     work = ROOT / "build/appimage-repack"
@@ -112,6 +132,7 @@ def build(baseline: Path, appimagetool: Path, version: str) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     env = {**os.environ, "ARCH": "x86_64", "VERSION": version,
            "APPIMAGE_EXTRACT_AND_RUN": "1"}
+    make_appdir_readable(appdir)
     subprocess.run([str(appimagetool), str(appdir), str(out)], check=True, env=env)
     out.chmod(out.stat().st_mode | 0o111)
     print(f"LINUX_APPIMAGE={out} ({out.stat().st_size} bytes)")
