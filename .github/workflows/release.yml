@@ -165,8 +165,31 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  # Community bots are optional and are not bundled in the core installers.
+  botpack:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Package optional botpack (exclude Wolvot)
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          python scripts/release/package_botpack.py --version "$VERSION"
+          test -f "dist/EvilRLBot-Community-Botpack-No-Wolvot-$VERSION.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: evilrlbot-botpack
+          path: dist/EvilRLBot-Community-Botpack-No-Wolvot-*.zip
+          if-no-files-found: error
+          retention-days: 7
+
   release:
-    needs: [plan, windows, linux]
+    needs: [plan, windows, linux, botpack]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -187,15 +210,19 @@ jobs:
           test -f "release/EvilRLBot-Windows-$VERSION-Setup.exe"
           test -f "release/EvilRLBot-Windows-$VERSION-Portable.zip"
           test -f "release/EvilRLBot-$VERSION-x86_64.AppImage"
+          test -f "release/EvilRLBot-Community-Botpack-No-Wolvot-$VERSION.zip"
           cat > release-notes.md <<EOF
           Automated build from commit $COMMIT_SHA.
 
           - Windows: x64 setup installer and portable ZIP.
           - Linux: x86_64 AppImage.
+          - Community botpack: separate optional ZIP, excludes Wolvot (see botpack/README.md).
           - Source: this tag points to the exact commit used by the builds.
 
           Both packages reuse native runtimes, RLBotServer and installed dependencies from the previous tested release and replace application source with this commit.
-          No third-party bot weights or Rocket League files are included. Builds are unsigned.
+          The core application packages include no third-party bot weights or Rocket League files.
+          The optional botpack ZIP includes third-party source, models and a Windows Wisp executable.
+          Respect the upstream licenses and inspect third-party files before running them. Builds are unsigned.
           EOF
           gh release create "$TAG" release/* --repo "$GITHUB_REPOSITORY" \
             --target "$COMMIT_SHA" --title "Evil RLBot $VERSION" \

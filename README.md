@@ -87,6 +87,10 @@ Basic source check:
 
 Integration tests require the matching RLBot dependencies and, for game-launch tests, a Rocket League installation.
 
+## Optional community botpack
+
+The [`botpack/`](botpack/README.md) directory contains the supplied Element, Necto, Nexto, Wisp V2 and unconfirmed Mech variants, **without any Wolvot files**. Its original model files and config files are tracked separately from Evil RLBot's application code. Every new GitHub Release also offers an optional `EvilRLBot-Community-Botpack-No-Wolvot-<version>.zip` download; use **Import archive** to add bots. This archive is not installed or executed automatically. Third-party licenses and usage restrictions apply; see the botpack README.
+
 ## Scope
 
 Evil RLBot is a community project, not an official RLBot or Psyonix/Epic Games product. Reports about specific bots should include the agent config, dependency versions, application logs and whether the agent uses the v4 bridge or the native v5 path. Please remove tokens and personal paths from logs before posting.

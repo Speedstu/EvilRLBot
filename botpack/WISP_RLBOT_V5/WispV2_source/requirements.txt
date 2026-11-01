@@ -1,0 +1,5 @@
+rlbot>=2.0.0.b52
+numpy==1.*
+numba==0.63.*
+torch==2.*
+rocketsim>=2.1.0

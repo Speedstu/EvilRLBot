@@ -1,0 +1,13 @@
+{
+    "return_stat": {
+        "count": 0,
+        "mean": 0,
+        "var": 0
+    },
+    "run_id": "HCEM_bot",
+    "skill_ratings": {
+        "1v1": 0
+    },
+    "total_iterations": 0,
+    "total_timesteps": 0
+}

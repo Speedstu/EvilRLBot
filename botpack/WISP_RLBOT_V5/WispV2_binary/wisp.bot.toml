@@ -1,0 +1,16 @@
+[details]
+description = "A multi-mode ML bot with focus on possession, teamwork, and aerials. Cute on the outside, not so much on the inside. Acknowledgements: Redd, Aether, FlamingFury, Zealan."
+developer = "Eastvillage"
+fun_ract = "Folklore Wisps lure people off the path by looking like distant laterns in the dark. Once the victim is lost, the Wisp attacks."
+language = "C++/Python (GGL)"
+source_link = ""
+tags = ["1v1", "teamwork"]
+
+[settings]
+agent_id = "eastvillage/wisp/v2-75B"
+loadout_file = "loadout.toml"
+logo_file = "logo.png"
+name = "Wisp v2-75B"
+root_dir = ""
+run_command = 'x86_64-pc-windows-msvc\\bot.exe'
+run_command_linux = "x86_64-unknown-linux-gnu/bot"
